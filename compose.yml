@@ -39,46 +39,43 @@ services:
         db:
           condition: service_healthy
 
-  # 3. Backend (Spring Boot)
-  backend:
-    image: izkybin/toolrent-backend:latest
-    container_name: toolrent-backend
-    ports:
-      - "8080:8080"
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/toolrent
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      
-      # Configuración de Seguridad para conectar con Keycloak
-      # OJO: 'keycloak' es el nombre del servicio de arriba. 
-      # 'toolrent-realm' será el nombre del reino que crearemos.
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/toolrent-realm
-    depends_on:
-      db:
-        condition: service_healthy
-      keycloak:
-        condition: service_started
-    networks:
-      - toolrent-net
+# 3. Backend (Spring Boot) - ¡COMENTAR TODO ESTO!
+  # Razón: Lo correrás en tu IDE (IntelliJ) o terminal con './mvnw spring-boot:run'
+  # Si no lo comentas, Docker ocupará el puerto 8080 y tu IDE fallará al arrancar.
+  # backend:
+  #   image: izkybin/toolrent-backend:latest
+  #   container_name: toolrent-backend
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/toolrent
+  #     - SPRING_DATASOURCE_USERNAME=postgres
+  #     - SPRING_DATASOURCE_PASSWORD=postgres
+  #     - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+  #     - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/toolrent-realm
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     keycloak:
+  #       condition: service_started
+  #   networks:
+  #     - toolrent-net
 
-  # 4. Frontend (React + Nginx)
-  frontend:
-    image: izkybin/toolrent-frontend:latest
-    container_name: toolrent-frontend
-    ports:
-      - "80:80"
-    environment:
-      # El frontend necesita saber dónde está Keycloak (acceso público)
-      # Nota: Desde el navegador, Keycloak se ve como localhost:8090
-      - VITE_KEYCLOAK_URL=http://localhost:8090
-      - VITE_KEYCLOAK_REALM=toolrent-realm
-      - VITE_KEYCLOAK_CLIENT_ID=toolrent-client
-    depends_on:
-      - backend
-    networks:
-      - toolrent-net
+  # 4. Frontend (React + Nginx) - ¡COMENTAR TODO ESTO!
+  # Razón: Lo correrás con 'npm run dev' para ver cambios en tiempo real.
+  # frontend:
+  #   image: izkybin/toolrent-frontend:latest
+  #   container_name: toolrent-frontend
+  #   ports:
+  #     - "80:80"
+  #   environment:
+  #     - VITE_KEYCLOAK_URL=http://localhost:8090
+  #     - VITE_KEYCLOAK_REALM=toolrent-realm
+  #     - VITE_KEYCLOAK_CLIENT_ID=toolrent-client
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - toolrent-net
 
 volumes:
   db_data:
