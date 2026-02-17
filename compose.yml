@@ -26,13 +26,14 @@ services:
       environment:
         - KEYCLOAK_ADMIN=admin
         - KEYCLOAK_ADMIN_PASSWORD=admin
-      # IMPORTANTE: Le decimos que importe el archivo al arrancar
+        # ESTA ES LA CLAVE DEL ÉXITO:
+        - KC_FEATURES=scripts
+      # Volvemos al comando simple, la variable de arriba hace el trabajo sucio
       command: start-dev --import-realm
       ports:
         - "8090:8080"
       networks:
         - toolrent-net
-      # IMPORTANTE: Conectamos tu archivo JSON al contenedor
       volumes:
         - ./keycloak-data/realm-export.json:/opt/keycloak/data/import/realm.json
       depends_on:

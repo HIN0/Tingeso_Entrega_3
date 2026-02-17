@@ -1,36 +1,45 @@
-import http from "../http-common";
+import axios from "axios";
+import keycloak from "./keycloak";
+
+const API_URL = "http://localhost:8080/tools";
+
+// Función auxiliar simple para crear la cabecera con el token
+const getAuthHeaders = () => {
+  return {
+    headers: {
+      'Authorization': `Bearer ${keycloak.token}` // Aquí va el token mágico
+    }
+  };
+};
 
 class ToolService {
-  // --- METODO GET ALL ---
   getAll() {
-    return http.get("/tools");
+    // Le pasamos las cabeceras a Axios manualmente
+    return axios.get(API_URL, getAuthHeaders());
   }
 
-  // --- MÉTODO GET ONE ---
   get(id) {
-    return http.get(`/tools/${id}`);
+    return axios.get(`${API_URL}/${id}`, getAuthHeaders());
   }
 
-  // --- MÉTODO CREATE ---
   create(data) {
-    return http.post("/tools", data);
+    return axios.post(API_URL, data, getAuthHeaders());
   }
 
-  // --- MÉTODO UPDATE ---
   update(id, data) {
-    // data debe contener name, category, replacementValue
-    return http.put(`/tools/${id}`, data);
+    return axios.put(`${API_URL}/${id}`, data, getAuthHeaders());
   }
 
-  // --- MÉTODO ADJUST STOCK ---
-  adjustStock(id, data) {
-      // data debe ser { quantityChange: number }
-      return http.patch(`/tools/${id}/stock`, data);
+  delete(id) {
+    return axios.delete(`${API_URL}/${id}`, getAuthHeaders());
   }
 
-  // --- MÉTODO DECOMMISSION ---
   decommission(id) {
-    return http.put(`/tools/${id}/decommission`);
+    return axios.patch(`${API_URL}/${id}/decommission`, {}, getAuthHeaders());
+  }
+  
+  adjustStock(id, data) {
+    return axios.patch(`${API_URL}/${id}/stock`, data, getAuthHeaders());
   }
 }
 

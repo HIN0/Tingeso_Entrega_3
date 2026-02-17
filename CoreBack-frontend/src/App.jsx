@@ -1,3 +1,4 @@
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
 import { useKeycloak } from "@react-keycloak/web";
 import Header from "./components/Header";
@@ -14,32 +15,61 @@ import AddClient from "./components/AddClient";
 import EditClient from "./components/EditClient";
 import KardexViewer from "./components/KardexViewer";
 
+const checkRole = (keycloak, roleName) => {
+  if (!keycloak || !keycloak.tokenParsed) return false;
+  
+  // 1. Buscar en Realm Roles (Nivel Global)
+  const realmRoles = keycloak.tokenParsed.realm_access?.roles || [];
+  
+  // 2. Buscar en Resource Roles (Nivel Cliente "toolrent-client")
+  const resourceRoles = keycloak.tokenParsed.resource_access?.['toolrent-client']?.roles || [];
+  
+  // Juntamos todo y buscamos ignorando mayúsculas/minúsculas
+  const allRoles = [...realmRoles, ...resourceRoles];
+  return allRoles.some(r => r.toUpperCase() === roleName.toUpperCase());
+};
+
 function RequireAuth({ children, roles }) {
   const { keycloak, initialized } = useKeycloak();
 
-  if (!initialized) return null;
-  if (!keycloak?.authenticated) return <Navigate to="/" replace />;
+  if (!initialized) {
+    return <div style={{padding: 20}}>Cargando autenticación...</div>;
+  }
+
+  if (!keycloak?.authenticated) {
+    return <Navigate to="/" replace />;
+  }
 
   if (roles?.length) {
-    const hasRole = roles.some((r) => keycloak.hasRealmRole(r));
-    if (!hasRole) return <h3 style={{padding:16}}>No autorizado</h3>;
+    const hasPermission = roles.some((r) => checkRole(keycloak, r));
+    if (!hasPermission) return <h3 style={{padding:16}}>No autorizado (Faltan roles: {roles.join(", ")})</h3>;
   }
   return children;
 }
 
 function Menu() {
-  const { keycloak } = useKeycloak();
-  const isAuth = !!keycloak?.authenticated;
-  const isAdmin = isAuth && keycloak.hasRealmRole("ADMIN");
-  const isUser = isAuth && keycloak.hasRealmRole("USER");
+  const { keycloak, initialized } = useKeycloak();
+
+  if (!initialized || !keycloak?.authenticated) return null;
+
+  // DEBUG: Esto mostrará en la consola del navegador (F12) tus roles exactos
+  const myRoles = keycloak.tokenParsed?.realm_access?.roles || [];
+  console.log("=== TUS ROLES ===", myRoles);
+
+  const isAdmin = checkRole(keycloak, "ADMIN");
+  const isUser = checkRole(keycloak, "USER");
 
   return (
-    <nav style={{display:"flex",gap:12,padding:"8px 16px",borderBottom:"1px solid #eee"}}>
+    <nav style={{display:"flex",gap:12,padding:"8px 16px",borderBottom:"1px solid #eee", background: "#f9f9f9"}}>
       <Link to="/tools">Herramientas</Link>
-      {(isAdmin) && <Link to="/tools/add">Agregar herramienta</Link>}
+      
+      {isAdmin && <Link to="/tools/add">Agregar herramienta</Link>}
+      
       <Link to="/loans">Préstamos</Link>
-      {(isAdmin) && <Link to="/clients">Clientes</Link>}
-      {(isAdmin) && <Link to="/tariffs">Tarifas</Link>}
+      
+      {isAdmin && <Link to="/clients">Clientes</Link>}
+      {isAdmin && <Link to="/tariffs">Tarifas</Link>}
+      
       {(isUser || isAdmin) && <Link to="/loans/add">Registrar préstamo</Link>}
       {(isUser || isAdmin) && <Link to="/reports">Reportes</Link>} 
       {(isUser || isAdmin) && <Link to="/kardex">Kardex</Link>}
@@ -56,6 +86,7 @@ export default function App() {
         <Route path="/" element={
           <div style={{ padding: 16 }}>
             <h2>Bienvenido a ToolRent</h2>
+            <p>Por favor, selecciona una opción del menú.</p>
           </div>
         } />
         {/* --- Rutas de Herramientas --- */}

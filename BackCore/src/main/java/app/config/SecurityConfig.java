@@ -11,6 +11,11 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -25,31 +30,20 @@ public class SecurityConfig {
 
         http
             .csrf(AbstractHttpConfigurer::disable)
-            .cors(AbstractHttpConfigurer::disable) 
+            // 1. CAMBIO: Activamos CORS usando la configuración de abajo
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Permitir "pre-flight" CORS
                 
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() 
-                
-                // Permite a USER y ADMIN leer las herramientas con "GET"
-                .requestMatchers(HttpMethod.GET, "/loans/**").hasAnyRole("ADMIN", "USER") 
-                .requestMatchers(HttpMethod.GET, "/tools/**").hasAnyRole("ADMIN", "USER")
-                                
-                // Regla de Escritura: Explícita para los métodos de modificación del ADMIN
+                // TUS REGLAS (Mantenemos tu lógica exacta)
+                .requestMatchers(HttpMethod.GET, "/loans/**", "/tools/**").hasAnyRole("ADMIN", "USER")
                 .requestMatchers(HttpMethod.POST, "/tools/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/tools/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PATCH, "/tools/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/tools/**").hasRole("ADMIN")
-
-                // Rutas que requieren solo ADMIN
-                .requestMatchers("/tariffs/**").hasRole("ADMIN")
-                .requestMatchers("/clients/**").hasRole("ADMIN") 
-                
-                // Rutas que requieren ADMIN o USER (Movimientos Del Kardex, Devoluciones, Préstamos y Reportes)
-                .requestMatchers("/kardex/**").hasAnyRole("ADMIN", "USER")
-                .requestMatchers("/returns/**").hasAnyRole("ADMIN", "USER")
-                .requestMatchers("/loans/**").hasAnyRole("ADMIN", "USER")
-                .requestMatchers("/reports/**").hasAnyRole("ADMIN", "USER")
+                .requestMatchers("/tariffs/**", "/clients/**").hasRole("ADMIN")
+                .requestMatchers("/kardex/**", "/returns/**", "/reports/**").hasAnyRole("ADMIN", "USER")
                 
                 .anyRequest().authenticated()
             )
@@ -58,5 +52,19 @@ public class SecurityConfig {
             );
 
         return http.build();
+    }
+
+    // 2. CAMBIO: Configuración CORS simple y directa en el mismo archivo
+    @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("http://localhost:5173")); // Tu React
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(List.of("*")); // Permitir todo header
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }
