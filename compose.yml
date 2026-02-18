@@ -6,7 +6,7 @@ services:
     environment:
       - POSTGRES_DB=toolrent
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD=admin
     ports:
       - "5432:5432"
     volumes:
@@ -26,9 +26,8 @@ services:
       environment:
         - KEYCLOAK_ADMIN=admin
         - KEYCLOAK_ADMIN_PASSWORD=admin
-        # ESTA ES LA CLAVE DEL ÉXITO:
         - KC_FEATURES=scripts
-      # Volvemos al comando simple, la variable de arriba hace el trabajo sucio
+
       command: start-dev --import-realm
       ports:
         - "8090:8080"
