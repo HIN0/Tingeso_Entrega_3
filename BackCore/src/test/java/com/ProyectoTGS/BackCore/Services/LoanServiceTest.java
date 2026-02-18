@@ -1,7 +1,5 @@
 package com.ProyectoTGS.BackCore.Services;
 
-import entities.*;
-import entities.enums.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,10 +7,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import app.entities.*;
+import app.entities.enums.*;
 import app.exceptions.InvalidOperationException;
 import app.exceptions.ResourceNotFoundException;
-import repositories.*;
-import services.*;
+import app.repositories.*;
+import app.services.*;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;

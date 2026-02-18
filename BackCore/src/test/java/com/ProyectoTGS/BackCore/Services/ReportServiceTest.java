@@ -1,20 +1,21 @@
 package com.ProyectoTGS.BackCore.Services;
 
-import entities.ClientEntity;
-import entities.LoanEntity;
-import entities.ToolEntity;
-import entities.enums.ClientStatus;
-import entities.enums.LoanStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import repositories.ClientRepository;
-import repositories.LoanRepository;
-import repositories.ToolRepository;
-import services.ReportService;
+
+import app.entities.ClientEntity;
+import app.entities.LoanEntity;
+import app.entities.ToolEntity;
+import app.entities.enums.ClientStatus;
+import app.entities.enums.LoanStatus;
+import app.repositories.ClientRepository;
+import app.repositories.LoanRepository;
+import app.repositories.ToolRepository;
+import app.services.ReportService;
 
 import java.time.LocalDate;
 import java.util.List;

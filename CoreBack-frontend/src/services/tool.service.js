@@ -1,45 +1,32 @@
-import axios from "axios";
-import keycloak from "./keycloak";
-
-const API_URL = "http://localhost:8080/tools";
-
-// Función auxiliar simple para crear la cabecera con el token
-const getAuthHeaders = () => {
-  return {
-    headers: {
-      'Authorization': `Bearer ${keycloak.token}` // Aquí va el token mágico
-    }
-  };
-};
+import http from "../http-common";
 
 class ToolService {
   getAll() {
-    // Le pasamos las cabeceras a Axios manualmente
-    return axios.get(API_URL, getAuthHeaders());
+    return http.get("/tools"); 
   }
 
   get(id) {
-    return axios.get(`${API_URL}/${id}`, getAuthHeaders());
+    return http.get(`/tools/${id}`);
   }
 
   create(data) {
-    return axios.post(API_URL, data, getAuthHeaders());
+    return http.post("/tools", data);
   }
 
   update(id, data) {
-    return axios.put(`${API_URL}/${id}`, data, getAuthHeaders());
+    return http.put(`/tools/${id}`, data);
   }
 
   delete(id) {
-    return axios.delete(`${API_URL}/${id}`, getAuthHeaders());
+    return http.delete(`/tools/${id}`);
   }
 
   decommission(id) {
-    return axios.patch(`${API_URL}/${id}/decommission`, {}, getAuthHeaders());
+    return http.patch(`/tools/${id}/decommission`);
   }
   
   adjustStock(id, data) {
-    return axios.patch(`${API_URL}/${id}/stock`, data, getAuthHeaders());
+    return http.patch(`/tools/${id}/stock`, data);
   }
 }
 

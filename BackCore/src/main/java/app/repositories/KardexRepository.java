@@ -1,0 +1,18 @@
+package app.repositories;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import app.entities.KardexEntity;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Repository
+public interface KardexRepository extends JpaRepository<KardexEntity, Long> {
+
+    List<KardexEntity> findByTool_Id(Long toolId);
+    List<KardexEntity> findByMovementDateBetween(LocalDateTime start, LocalDateTime end);
+    List<KardexEntity> findByTool_IdAndType(Long toolId, app.entities.enums.MovementType type);
+    List<KardexEntity> findByMovementDateBetweenAndType(LocalDateTime start, LocalDateTime end, app.entities.enums.MovementType type);
+}

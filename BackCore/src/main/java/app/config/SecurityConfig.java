@@ -44,7 +44,8 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.DELETE, "/tools/**").hasRole("ADMIN")
             .requestMatchers("/tariffs/**", "/clients/**").hasRole("ADMIN")
             .requestMatchers("/kardex/**", "/returns/**", "/reports/**").hasAnyRole("ADMIN", "USER")
-            
+            .requestMatchers("/users/**").hasRole("ADMIN")
+
             .anyRequest().authenticated()
         )
         .oauth2ResourceServer(oauth2 -> oauth2

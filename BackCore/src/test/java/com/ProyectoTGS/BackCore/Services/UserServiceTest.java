@@ -1,14 +1,15 @@
 package com.ProyectoTGS.BackCore.Services;
 
-import entities.UserEntity;
-import entities.enums.UserRole;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import repositories.UserRepository;
-import services.UserService;
+
+import app.entities.UserEntity;
+import app.entities.enums.UserRole;
+import app.repositories.UserRepository;
+import app.services.UserService;
 
 import java.util.Optional;
 

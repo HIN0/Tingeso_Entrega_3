@@ -1,21 +1,22 @@
 package com.ProyectoTGS.BackCore.Services;
 
-import entities.ClientEntity;
-import entities.LoanEntity;
-import entities.enums.ClientStatus;
-import entities.enums.LoanStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import repositories.ClientRepository;
-import repositories.LoanRepository;
-import services.ClientService;
-import dtos.UpdateClientRequest;
+
+import app.services.ClientService;
+import app.dtos.UpdateClientRequest;
+import app.entities.ClientEntity;
+import app.entities.LoanEntity;
+import app.entities.enums.ClientStatus;
+import app.entities.enums.LoanStatus;
 import app.exceptions.InvalidOperationException;
 import app.exceptions.ResourceNotFoundException;
+import app.repositories.ClientRepository;
+import app.repositories.LoanRepository;
 
 import java.util.Arrays;
 import java.util.Collections;

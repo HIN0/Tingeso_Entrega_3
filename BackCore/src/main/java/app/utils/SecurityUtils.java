@@ -1,10 +1,11 @@
 package app.utils;
 
-import entities.UserEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component; // NECESARIO para que Spring la gestione
-import services.UserService; // NECESARIO para buscar el ID de usuario
+
+import app.entities.UserEntity;
+import app.services.UserService; // NECESARIO para buscar el ID de usuario
 
 @Component // ¡ESTA ES LA ANOTACIÓN FALTANTE QUE RESUELVE EL ERROR!
 public class SecurityUtils {

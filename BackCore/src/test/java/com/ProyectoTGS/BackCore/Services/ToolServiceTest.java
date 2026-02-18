@@ -1,21 +1,23 @@
 package com.ProyectoTGS.BackCore.Services;
 
-import entities.ToolEntity;
-import entities.UserEntity;
-import entities.enums.MovementType;
-import entities.enums.ToolStatus;
+import app.dtos.UpdateToolRequest;
+import app.entities.ToolEntity;
+import app.entities.UserEntity;
+import app.entities.enums.MovementType;
+import app.entities.enums.ToolStatus;
 import app.exceptions.InvalidOperationException; 
-import app.exceptions.ResourceNotFoundException; 
-import dtos.UpdateToolRequest;
+import app.exceptions.ResourceNotFoundException;
+import app.repositories.ToolRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import repositories.ToolRepository;
-import services.KardexService;
-import services.ToolService;
+
+import app.services.KardexService;
+import app.services.ToolService;
 
 import java.util.Collections;
 import java.util.List;

@@ -1,14 +1,15 @@
 package com.ProyectoTGS.BackCore.Services;
 
-import entities.TariffEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import repositories.TariffRepository;
-import services.TariffService;
+
+import app.entities.TariffEntity;
+import app.repositories.TariffRepository;
+import app.services.TariffService;
 
 import java.util.Collections;
 import java.util.List;

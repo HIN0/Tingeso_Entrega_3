@@ -1,19 +1,20 @@
 package com.ProyectoTGS.BackCore.Services;
 
-import entities.KardexEntity;
-import entities.ToolEntity;
-import entities.UserEntity;
-import entities.enums.MovementType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import repositories.KardexRepository;
-import repositories.ToolRepository;
-import services.KardexService;
+
+import app.services.KardexService;
+import app.entities.KardexEntity;
+import app.entities.ToolEntity;
+import app.entities.UserEntity;
+import app.entities.enums.MovementType;
 import app.exceptions.ResourceNotFoundException;
+import app.repositories.KardexRepository;
+import app.repositories.ToolRepository;
 
 import java.time.LocalDateTime;
 import java.util.Collections; 
