@@ -57,8 +57,10 @@ const loadTools = () => {
 };
 
 useEffect(() => {
-    loadTools();
-}, []);
+    if (keycloak.authenticated) {
+        loadTools();
+    }
+  }, [keycloak.authenticated]); 
 
 const handleDecommission = (id) => {
     setError('');

@@ -24,35 +24,35 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    JwtAuthenticationConverter jwtAuthConverter = new JwtAuthenticationConverter();
+    jwtAuthConverter.setJwtGrantedAuthoritiesConverter(new KeycloakRealmRoleConverter());
 
-        JwtAuthenticationConverter jwtAuthConverter = new JwtAuthenticationConverter();
-        jwtAuthConverter.setJwtGrantedAuthoritiesConverter(new KeycloakRealmRoleConverter());
+    http
+        // Mover .cors() al principio para asegurar que se procese antes que la autorización
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        .csrf(AbstractHttpConfigurer::disable)
+        .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(auth -> auth
+            // Permitir explícitamente el pre-flight de CORS para todas las rutas
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+            
+            // Reglas de negocio
+            .requestMatchers(HttpMethod.GET, "/loans/**", "/tools/**").hasAnyRole("ADMIN", "USER")
+            .requestMatchers(HttpMethod.POST, "/tools/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.PUT, "/tools/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.PATCH, "/tools/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/tools/**").hasRole("ADMIN")
+            .requestMatchers("/tariffs/**", "/clients/**").hasRole("ADMIN")
+            .requestMatchers("/kardex/**", "/returns/**", "/reports/**").hasAnyRole("ADMIN", "USER")
+            
+            .anyRequest().authenticated()
+        )
+        .oauth2ResourceServer(oauth2 -> oauth2
+            .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthConverter))
+        );
 
-        http
-            .csrf(AbstractHttpConfigurer::disable)
-            // 1. CAMBIO: Activamos CORS usando la configuración de abajo
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Permitir "pre-flight" CORS
-                
-                // TUS REGLAS (Mantenemos tu lógica exacta)
-                .requestMatchers(HttpMethod.GET, "/loans/**", "/tools/**").hasAnyRole("ADMIN", "USER")
-                .requestMatchers(HttpMethod.POST, "/tools/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/tools/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PATCH, "/tools/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/tools/**").hasRole("ADMIN")
-                .requestMatchers("/tariffs/**", "/clients/**").hasRole("ADMIN")
-                .requestMatchers("/kardex/**", "/returns/**", "/reports/**").hasAnyRole("ADMIN", "USER")
-                
-                .anyRequest().authenticated()
-            )
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthConverter))
-            );
-
-        return http.build();
-    }
+    return http.build();
+}
 
     // 2. CAMBIO: Configuración CORS simple y directa en el mismo archivo
     @Bean
