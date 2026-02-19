@@ -223,18 +223,22 @@ public class ReportServiceTest {
 
     @Test
     void getTopTools_FailsIfFromDateIsNull() {
+        LocalDate today = LocalDate.now();
+
          // ACT & ASSERT
         assertThrows(IllegalArgumentException.class, () -> {
-            reportService.getTopTools(null, LocalDate.now());
+            reportService.getTopTools(null, today);
         });
         verify(loanRepository, never()).findTopToolsByDateRange(any(), any());
     }
 
     @Test
     void getTopTools_FailsIfToDateIsNull() {
+        LocalDate today = LocalDate.now();
+
         // ACT & ASSERT
         assertThrows(IllegalArgumentException.class, () -> {
-            reportService.getTopTools(LocalDate.now(), null);
+            reportService.getTopTools(today, null);
         });
         verify(loanRepository, never()).findTopToolsByDateRange(any(), any());
     }

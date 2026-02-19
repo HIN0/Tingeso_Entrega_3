@@ -494,7 +494,7 @@ public class ClientServiceTest {
     void getClientById_Success_WhenClientExists() {
         // ARRANGE: Un cliente existente
         Long clientId = 1L;
-        ClientEntity existingClient = ClientEntity.builder()
+        ClientEntity existingClientTest = ClientEntity.builder()
                 .id(clientId)
                 .name("Cliente Existente")
                 .rut("11.111.111-1")
@@ -502,7 +502,7 @@ public class ClientServiceTest {
                 .build();
 
         // Mockeo: findById devuelve el Optional con el cliente
-        when(clientRepository.findById(clientId)).thenReturn(Optional.of(existingClient));
+        when(clientRepository.findById(clientId)).thenReturn(Optional.of(existingClientTest));
 
         // ACT: Llamar al método del servicio
         ClientEntity foundClient = clientService.getClientById(clientId);

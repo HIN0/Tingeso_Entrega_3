@@ -10,6 +10,7 @@ import app.exceptions.ResourceNotFoundException;
 import app.repositories.ClientRepository;
 import app.repositories.LoanRepository;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
@@ -19,6 +20,7 @@ import org.springframework.validation.annotation.Validated;
 
 @Service
 @Validated
+@Slf4j
 public class ClientService {
 
     private final ClientRepository clientRepository;
@@ -81,7 +83,7 @@ public class ClientService {
 
         // 2. Si ya está activo, no hacer nada
         if (client.getStatus() == ClientStatus.ACTIVE) {
-            System.out.println("Client " + clientId + " is already active.");
+            log.info("Client with id {} is already active.", clientId);
             return client;
         }
 
@@ -98,8 +100,11 @@ public class ClientService {
             throw new InvalidOperationException("Cannot reactivate client: " + unpaidReceivedLoans.size() + " unpaid loan(s) found.");
         }
 
-        // 5. Si pasa las validaciones, reactivar
-        System.out.println("Client " + clientId + " meets criteria for reactivation. Setting status to ACTIVE.");
-        return updateStatus(clientId, ClientStatus.ACTIVE); // Reutiliza el método existente
+        // 5. Si pasa las validaciones, reactivar el cliente
+        // En lugar de llamar a updateStatus(clientId, ...),
+        // modificamos el objeto 'client' que ya tenemos en memoria y lo guardamos.
+        // Esto evita la autoinvocación y asegura que la transacción sea válida.
+        client.setStatus(ClientStatus.ACTIVE);
+        return clientRepository.save(client);
     }
 }

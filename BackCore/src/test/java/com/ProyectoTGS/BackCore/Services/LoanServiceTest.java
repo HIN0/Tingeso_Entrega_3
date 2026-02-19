@@ -59,7 +59,7 @@ public class LoanServiceTest {
         testUser = UserEntity.builder().username("test_user").id(1L).build();
         
         // Re-inicializamos el servicio para cada prueba
-        loanService = new LoanService(loanRepository, clientRepository, toolRepository, toolService, kardexService, tariffService, clientService);
+        loanService = new LoanService(loanRepository, clientRepository, toolRepository, toolService, tariffService, clientService);
     }
 
     // =========================================================================================================
@@ -179,6 +179,7 @@ public class LoanServiceTest {
 
     @Test
     void createLoan_Fails_WhenToolStatusIsNotAvailable() {
+
         // ARRANGE: Herramienta en estado LOANED
         Long toolId = 20L;
         ToolEntity toolLoaned = ToolEntity.builder()
@@ -188,18 +189,21 @@ public class LoanServiceTest {
                 .build();
 
         // Mockeo:
-        // 1. Validaciones previas (Cliente y Deudas) pasan
+        // Validaciones previas (Cliente y Deudas) pasan
         when(clientRepository.findById(1L)).thenReturn(Optional.of(clientActive));
         when(loanRepository.countByClientAndStatus(clientActive, LoanStatus.LATE)).thenReturn(0L);
         when(loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(clientActive, LoanStatus.RECEIVED, 0.0))
                 .thenReturn(Collections.emptyList());
         
+        // 1. ARRANGE: Preparar datos fuera de la validación
+        LocalDate today = LocalDate.now();
+        LocalDate tomorrow = today.plusDays(1);
         // 2. Mockear la herramienta que fallará la validación
         when(toolRepository.findById(toolId)).thenReturn(Optional.of(toolLoaned));
 
         // ACT & ASSERT: Debe fallar con InvalidOperationException si el estado no es AVAILABLE
         assertThrows(InvalidOperationException.class, () -> { // <-- EXCEPCIÓN CORREGIDA
-            loanService.createLoan(1L, toolId, LocalDate.now(), LocalDate.now().plusDays(1), testUser);
+            loanService.createLoan(1L, toolId, today, tomorrow, testUser);
         }, "Debe lanzar InvalidOperationException si el estado no es AVAILABLE.");
 
         // VERIFY: Verificar que falló después de las validaciones de cliente pero antes de guardar
@@ -220,21 +224,24 @@ public class LoanServiceTest {
                 .build();
 
         // Mockeo:
-        // 1. Validaciones previas (Cliente y Deudas) pasan
+        // Validaciones previas (Cliente y Deudas) pasan
         when(clientRepository.findById(1L)).thenReturn(Optional.of(clientActive));
         when(loanRepository.countByClientAndStatus(clientActive, LoanStatus.LATE)).thenReturn(0L);
         when(loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(clientActive, LoanStatus.RECEIVED, 0.0))
                 .thenReturn(Collections.emptyList());
         
+        // 1. ARRANGE: Preparar datos fuera de la validación
+        LocalDate today = LocalDate.now();
+        LocalDate tomorrow = today.plusDays(1);
         // 2. Mockear la herramienta que fallará la validación
         when(toolRepository.findById(toolId)).thenReturn(Optional.of(toolOutOfStock));
 
         // ACT & ASSERT: Debe fallar con InvalidOperationException si el stock es 0
         assertThrows(InvalidOperationException.class, () -> { // <-- EXCEPCIÓN CORREGIDA
-            loanService.createLoan(1L, toolId, LocalDate.now(), LocalDate.now().plusDays(1), testUser);
+            loanService.createLoan(1L, toolId, today, tomorrow, testUser);
         }, "Debe lanzar InvalidOperationException si el stock es 0.");
 
-        // VERIFY: Verificar que falló después de las validaciones de cliente pero antes de guardar
+        // 3. VERIFY: Verificar que falló después de las validaciones de cliente pero antes de guardar
         verify(loanRepository, times(1)).countByClientAndStatus(clientActive, LoanStatus.LATE);
         verify(loanRepository, times(1)).findByClientAndStatusAndTotalPenaltyGreaterThan(clientActive, LoanStatus.RECEIVED, 0.0);
         verify(toolRepository, times(1)).findById(toolId);
@@ -291,6 +298,8 @@ public class LoanServiceTest {
         // ARRANGE: Cliente activo pero con una deuda pendiente
         LocalDate today = LocalDate.now();
         LocalDate dueDate = today.plusDays(7);
+        Long activeClientId = clientActive.getId();
+        Long availableToolId = toolAvailable.getId();
 
         // Simular un préstamo anterior en estado RECEIVED con penalidad > 0
         LoanEntity unpaidReceivedLoan = LoanEntity.builder()
@@ -301,9 +310,9 @@ public class LoanServiceTest {
 
         // Mockeo:
         // 1. Encontrar al cliente activo
-        when(clientRepository.findById(clientActive.getId())).thenReturn(Optional.of(clientActive));
+        when(clientRepository.findById(activeClientId)).thenReturn(Optional.of(clientActive));
         // 2. Encontrar la herramienta disponible
-        when(toolRepository.findById(toolAvailable.getId())).thenReturn(Optional.of(toolAvailable));
+        when(toolRepository.findById(availableToolId)).thenReturn(Optional.of(toolAvailable));
         // 3. No tiene préstamos LATE
         when(loanRepository.countByClientAndStatus(clientActive, LoanStatus.LATE)).thenReturn(0L);
         // 4. SIMULAR QUE TIENE DEUDAS PENDIENTES (devuelve lista no vacía)
@@ -312,12 +321,12 @@ public class LoanServiceTest {
 
         // ACT & ASSERT: Esperamos que lance InvalidOperationException
         assertThrows(InvalidOperationException.class, () -> {
-            loanService.createLoan(clientActive.getId(), toolAvailable.getId(), today, dueDate, testUser);
+            loanService.createLoan(activeClientId, availableToolId, today, dueDate, testUser);
         }, "Debe lanzar InvalidOperationException porque el cliente tiene deudas pendientes.");
 
         // Verificar que se hicieron las comprobaciones hasta el punto de fallo
-        verify(clientRepository, times(1)).findById(clientActive.getId());
-        verify(toolRepository, times(1)).findById(toolAvailable.getId()); // Verifica la herramienta también
+        verify(clientRepository, times(1)).findById(activeClientId);
+        verify(toolRepository, times(1)).findById(availableToolId); // Verifica la herramienta también
         verify(loanRepository, times(1)).countByClientAndStatus(clientActive, LoanStatus.LATE);
         verify(loanRepository, times(1)).findByClientAndStatusAndTotalPenaltyGreaterThan(clientActive, LoanStatus.RECEIVED, 0.0);
         // VERIFICACIÓN CRÍTICA: Asegurarse de que NO se intentó guardar el nuevo préstamo
@@ -331,23 +340,25 @@ public class LoanServiceTest {
         // ARRANGE: Cliente activo pero con préstamos atrasados
         LocalDate today = LocalDate.now();
         LocalDate dueDate = today.plusDays(7);
+        Long activeClientId = clientActive.getId();
+        Long availableToolId = toolAvailable.getId();
 
         // Mockeo:
         // 1. Encontrar al cliente activo
-        when(clientRepository.findById(clientActive.getId())).thenReturn(Optional.of(clientActive));
+        when(clientRepository.findById(activeClientId)).thenReturn(Optional.of(clientActive));
         // 2. Encontrar la herramienta disponible
-        when(toolRepository.findById(toolAvailable.getId())).thenReturn(Optional.of(toolAvailable));
+        when(toolRepository.findById(availableToolId)).thenReturn(Optional.of(toolAvailable));
         // 3. SIMULAR QUE TIENE PRÉSTAMOS LATE (devolver > 0)
         when(loanRepository.countByClientAndStatus(clientActive, LoanStatus.LATE)).thenReturn(1L); // Tiene 1 préstamo LATE
 
         // ACT & ASSERT: Esperamos que lance InvalidOperationException
         assertThrows(InvalidOperationException.class, () -> {
-            loanService.createLoan(clientActive.getId(), toolAvailable.getId(), today, dueDate, testUser);
+            loanService.createLoan(activeClientId, availableToolId, today, dueDate, testUser);
         }, "Debe lanzar InvalidOperationException porque el cliente tiene préstamos LATE.");
 
         // Verificar que se hicieron las comprobaciones hasta el punto de fallo
-        verify(clientRepository, times(1)).findById(clientActive.getId());
-        verify(toolRepository, times(1)).findById(toolAvailable.getId());
+        verify(clientRepository, times(1)).findById(activeClientId);
+        verify(toolRepository, times(1)).findById(availableToolId);
         verify(loanRepository, times(1)).countByClientAndStatus(clientActive, LoanStatus.LATE);
         // VERIFICACIÓN CRÍTICA: Asegurarse de que NO continuó verificando deudas RECEIVED
         verify(loanRepository, never()).findByClientAndStatusAndTotalPenaltyGreaterThan(any(ClientEntity.class), any(LoanStatus.class), anyDouble());
@@ -543,6 +554,9 @@ public class LoanServiceTest {
     @Test
     void returnLoan_FailsWhenLoanStatusIsClosed() {
         // ARRANGE: Simular un préstamo ya cerrado (CLOSED)
+        Long availableToolId = toolAvailable.getId();
+        LocalDate returnDate = LocalDate.now();
+
         Long loanId = 9L;
         LoanEntity loan = LoanEntity.builder()
                 .id(loanId)
@@ -555,7 +569,7 @@ public class LoanServiceTest {
         // ACT & ASSERT: Debe fallar si el estado no es ACTIVE o LATE
         assertThrows(InvalidOperationException.class, () -> 
             // Usamos toolAvailable.getId() (que es 10L)
-            loanService.returnLoan(loanId, toolAvailable.getId(), false, false, testUser, LocalDate.now()),
+            loanService.returnLoan(loanId, availableToolId, false, false, testUser, returnDate),
             "Solo se pueden devolver préstamos activos o atrasados.");
 
         verify(loanRepository, times(1)).findById(loanId);
@@ -662,8 +676,6 @@ public class LoanServiceTest {
 
         // MOCKEO:
         when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
-        // Necesitamos toolRepository.findById si returnLoan lo busca, aunque lo obtiene del préstamo
-        // when(toolRepository.findById(toolAvailable.getId())).thenReturn(Optional.of(toolAvailable));
         when(tariffService.getDailyLateFee()).thenReturn(2000.0);    // Multa diaria
         when(tariffService.getRepairFee()).thenReturn(1500.0);     // Cargo reparación
         when(tariffService.getDailyRentFee()).thenReturn(1000.0);   // Tarifa arriendo diaria

@@ -22,6 +22,10 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private static final String ROLE_ADMIN = "ADMIN";
+    private static final String ROLE_EMPLOYEE = "USER";
+    private static final String TOOLS_PATH = "/tools/**";
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     JwtAuthenticationConverter jwtAuthConverter = new JwtAuthenticationConverter();
@@ -37,14 +41,14 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             
             // Reglas de negocio
-            .requestMatchers(HttpMethod.GET, "/loans/**", "/tools/**").hasAnyRole("ADMIN", "USER")
-            .requestMatchers(HttpMethod.POST, "/tools/**").hasRole("ADMIN")
-            .requestMatchers(HttpMethod.PUT, "/tools/**").hasRole("ADMIN")
-            .requestMatchers(HttpMethod.PATCH, "/tools/**").hasRole("ADMIN")
-            .requestMatchers(HttpMethod.DELETE, "/tools/**").hasRole("ADMIN")
-            .requestMatchers("/tariffs/**", "/clients/**").hasRole("ADMIN")
-            .requestMatchers("/kardex/**", "/returns/**", "/reports/**").hasAnyRole("ADMIN", "USER")
-            .requestMatchers("/users/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.GET, "/loans/**", TOOLS_PATH).hasAnyRole(ROLE_ADMIN, ROLE_EMPLOYEE)
+            .requestMatchers(HttpMethod.POST,   TOOLS_PATH).hasRole(ROLE_ADMIN)
+            .requestMatchers(HttpMethod.PUT,    TOOLS_PATH).hasRole(ROLE_ADMIN)
+            .requestMatchers(HttpMethod.PATCH,  TOOLS_PATH).hasRole(ROLE_ADMIN)
+            .requestMatchers(HttpMethod.DELETE, TOOLS_PATH).hasRole(ROLE_ADMIN)
+            .requestMatchers("/tariffs/**", "/clients/**").hasRole(ROLE_ADMIN)
+            .requestMatchers("/kardex/**", "/returns/**", "/reports/**").hasAnyRole(ROLE_ADMIN, ROLE_EMPLOYEE)
+            .requestMatchers("/users/**").hasRole(ROLE_ADMIN)
 
             .anyRequest().authenticated()
         )

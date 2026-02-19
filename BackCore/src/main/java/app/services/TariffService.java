@@ -15,8 +15,11 @@ public class TariffService {
         this.tariffRepository = tariffRepository;
     }
 
-    @Transactional(readOnly = true)
     public TariffEntity getTariff() {
+        return fetchFromDb();
+    }
+
+    private TariffEntity fetchFromDb() {
         return tariffRepository.findAll().stream()
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("No tariffs configured"));
@@ -24,22 +27,23 @@ public class TariffService {
 
     @Transactional
     public TariffEntity updateTariff(TariffEntity updated) {
-        TariffEntity current = getTariff();
+        TariffEntity current = fetchFromDb(); // LLAMADA INTERNA A MÉTODO PRIVADO (OK)
         current.setDailyRentFee(updated.getDailyRentFee());
         current.setDailyLateFee(updated.getDailyLateFee());
         current.setRepairFee(updated.getRepairFee());
         return tariffRepository.save(current);
     }
 
+    // 3. MÉTODOS DE CONSULTA: Todos llaman al PRIVADO fetchFromDb()
     public double getDailyLateFee() {
-        return getTariff().getDailyLateFee();
+        return fetchFromDb().getDailyLateFee();
     }
 
     public double getDailyRentFee() {
-        return getTariff().getDailyRentFee();
+        return fetchFromDb().getDailyRentFee(); 
     }
 
     public double getRepairFee() {
-        return getTariff().getRepairFee();
+        return fetchFromDb().getRepairFee();
     }
 }

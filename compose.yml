@@ -77,6 +77,14 @@ services:
   #   networks:
   #     - toolrent-net
 
+  sonarqube:
+    image: sonarqube:community
+    container_name: toolrent-sonarqube
+    ports:
+      - "9000:9000"
+    networks:
+      - toolrent-net
+
 volumes:
   db_data:
 

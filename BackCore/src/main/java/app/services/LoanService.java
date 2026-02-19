@@ -29,12 +29,13 @@ public class LoanService {
     private final TariffService tariffService;
     private final ClientService clientService;
 
+    private static final String LOAN_NOT_FOUND_MESSAGE = "Loan not found with id: ";
+
     // --- Constructor ---
     public LoanService(LoanRepository loanRepository,
                        ClientRepository clientRepository,
                        ToolRepository toolRepository,
                        ToolService toolService,
-                       KardexService kardexService,
                        TariffService tariffService,
                        ClientService clientService) {
         this.loanRepository = loanRepository;
@@ -51,12 +52,17 @@ public class LoanService {
     // METODO ENVOLVENTE PARA CREAR PRÉSTAMO CON FECHA DE INICIO HOY
     @Transactional
     public LoanEntity createLoan(Long clientId, Long toolId, LocalDate dueDate, UserEntity user) {
-        return createLoan(clientId, toolId, LocalDate.now(), dueDate, user);
+        return internalCreateLoanLogic(clientId, toolId, LocalDate.now(), dueDate, user);
     }
 
-    // MÉTODO PRINCIPAL PARA CREAR PRÉSTAMO
+    // MÉTODO PRINCIPAL (Crear Préstamo)
     @Transactional
     public LoanEntity createLoan(Long clientId, Long toolId, LocalDate startDate, LocalDate dueDate, UserEntity user) {
+        return internalCreateLoanLogic(clientId, toolId, startDate, dueDate, user);
+    }
+
+    // MÉTODO PRIVADO: Aquí reside la lógica real. 
+    private LoanEntity internalCreateLoanLogic(Long clientId, Long toolId, LocalDate startDate, LocalDate dueDate, UserEntity user) {
         // 0. Obtener Cliente y Herramienta ---
         ClientEntity client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + clientId));
@@ -126,18 +132,24 @@ public class LoanService {
     // ########################################################################################################################################################
     // ####################################################### MÉTODOS DE DEVOLUCION ##########################################################################
     // ########################################################################################################################################################
-    // MÉTODO ENVOLVENTE PARA DEVOLVER PRÉSTAMO CON FECHA DE DEVOLUCIÓN HOY
-    @Transactional
+
+    // 1. MÉTODO ENVOLVENTE (El que usa la fecha de hoy)
+    @Transactional // Mantenemos el @Transactional para evitar el error Blocker 
     public LoanEntity returnLoan(Long loanId, Long toolId, boolean damaged, boolean irreparable, UserEntity user) {
-        return returnLoan(loanId, toolId, damaged, irreparable, user, LocalDate.now());
+        return internalReturnLoanLogic(loanId, toolId, damaged, irreparable, user, LocalDate.now());
+    }
+
+    // 2. MÉTODO PRINCIPAL (El que recibe una fecha específica)
+    @Transactional
+    public LoanEntity returnLoan(Long loanId, Long toolId, boolean damaged, boolean irreparable, UserEntity user, LocalDate returnDate) {
+        return internalReturnLoanLogic(loanId, toolId, damaged, irreparable, user, returnDate);
     }
 
     // MÉTODO PRINCIPAL PARA DEVOLVER PRÉSTAMO
-    @Transactional
-    public LoanEntity returnLoan(Long loanId, Long toolId, boolean damaged, boolean irreparable, UserEntity user, LocalDate returnDate) {
+    private LoanEntity internalReturnLoanLogic(Long loanId, Long toolId, boolean damaged, boolean irreparable, UserEntity user, LocalDate returnDate) {
         // 0. Obtener Préstamo y Herramienta ---
         LoanEntity loan = loanRepository.findById(loanId)
-                .orElseThrow(() -> new ResourceNotFoundException("Loan not found with id: " + loanId));
+                .orElseThrow(() -> new ResourceNotFoundException(LOAN_NOT_FOUND_MESSAGE + loanId));
 
         // 1. Verificar que el toolId recibido coincida con el del préstamo original
         if (!loan.getTool().getId().equals(toolId)) {
@@ -225,7 +237,7 @@ public class LoanService {
     public LoanEntity markLoanAsPaid(Long loanId) {
         // 1. Encontrar el préstamo
         LoanEntity loan = loanRepository.findById(loanId)
-                .orElseThrow(() -> new ResourceNotFoundException("Loan not found with id: " + loanId));
+                .orElseThrow(() -> new ResourceNotFoundException(LOAN_NOT_FOUND_MESSAGE + loanId));
 
         // 2. Validar que sea un préstamo RECIBIDO y con deuda
         if (loan.getStatus() != LoanStatus.RECEIVED) {
@@ -259,7 +271,7 @@ public class LoanService {
     @Transactional(readOnly = true)
     public LoanEntity getLoanById(Long loanId) {
         return loanRepository.findById(loanId)
-                .orElseThrow(() -> new ResourceNotFoundException("Loan not found with id: " + loanId));
+                .orElseThrow(() -> new ResourceNotFoundException(LOAN_NOT_FOUND_MESSAGE + loanId));
     }
 
     @Transactional(readOnly = true)

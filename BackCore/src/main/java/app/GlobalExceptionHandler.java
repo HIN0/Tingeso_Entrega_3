@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-// Para formatear errores de validación
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -17,6 +16,9 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final String ERROR_KEY = "error";
+    private static final String MESSAGE_KEY = "message";
 
     // Logger para registrar errores
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
@@ -26,8 +28,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleResourceNotFoundException(ResourceNotFoundException ex) {
         log.warn("Resource not found: {}", ex.getMessage()); // Log como advertencia
         Map<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("error", "Not Found");
-        errorResponse.put("message", ex.getMessage());
+        errorResponse.put(ERROR_KEY, "Not Found");
+        errorResponse.put(MESSAGE_KEY, ex.getMessage());
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
 
@@ -36,8 +38,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleInvalidOperationException(InvalidOperationException ex) {
         log.warn("Invalid operation requested: {}", ex.getMessage()); // Log como advertencia
         Map<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("error", "Bad Request");
-        errorResponse.put("message", ex.getMessage());
+        errorResponse.put(ERROR_KEY, "Bad Request");
+        errorResponse.put(MESSAGE_KEY, ex.getMessage());
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
@@ -46,7 +48,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         log.warn("Validation failed: {}", ex.getMessage());
         Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("error", "Validation Failed");
+        errorResponse.put(ERROR_KEY, "Validation Failed");
         // Extraer los mensajes de error por campo
         Map<String, String> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
                 .collect(Collectors.toMap(
@@ -54,7 +56,7 @@ public class GlobalExceptionHandler {
                         fieldError -> fieldError.getDefaultMessage() != null ? fieldError.getDefaultMessage() : "Invalid value"
                 ));
         errorResponse.put("fieldErrors", fieldErrors);
-        errorResponse.put("message", "Validation error(s) occurred. Check 'fieldErrors' for details.");
+        errorResponse.put(MESSAGE_KEY, "Validation error(s) occurred. Check 'fieldErrors' for details.");
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
@@ -64,8 +66,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleGenericException(Exception ex) {
         log.error("An unexpected error occurred: ", ex);
         Map<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("error", "Internal Server Error");
-        errorResponse.put("message", "An unexpected error occurred. Please try again later.");
+        errorResponse.put(ERROR_KEY, "Internal Server Error");
+        errorResponse.put(MESSAGE_KEY, "An unexpected error occurred. Please try again later.");
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

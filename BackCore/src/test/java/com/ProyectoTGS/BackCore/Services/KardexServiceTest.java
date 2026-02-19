@@ -21,6 +21,8 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -222,7 +224,7 @@ public class KardexServiceTest {
         verify(kardexRepository, times(1)).findByMovementDateBetween(start, end);
     }
 
-     @Test
+    @Test
     void getMovementsByDate_ReturnsEmptyListWhenNoMovementsInDateRange() {
         // ARRANGE
         LocalDateTime start = LocalDateTime.now().minusDays(1);
@@ -240,8 +242,9 @@ public class KardexServiceTest {
     @Test
     void getMovementsByDate_FailsWhenStartDateIsNull() {
         // ACT & ASSERT
+        LocalDateTime now = LocalDateTime.now();
         assertThrows(IllegalArgumentException.class, () -> {
-            kardexService.getMovementsByDate(null, LocalDateTime.now());
+            kardexService.getMovementsByDate(null, now);
         }, "Debe lanzar IllegalArgumentException si startDate es null.");
         verify(kardexRepository, never()).findByMovementDateBetween(any(), any());
     }
@@ -249,8 +252,9 @@ public class KardexServiceTest {
     @Test
     void getMovementsByDate_FailsWhenEndDateIsNull() {
         // ACT & ASSERT
+        LocalDateTime now = LocalDateTime.now();
         assertThrows(IllegalArgumentException.class, () -> {
-            kardexService.getMovementsByDate(LocalDateTime.now(), null);
+            kardexService.getMovementsByDate(now, null);
         }, "Debe lanzar IllegalArgumentException si endDate es null.");
         verify(kardexRepository, never()).findByMovementDateBetween(any(), any());
     }
