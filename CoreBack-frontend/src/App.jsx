@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
 import { useKeycloak } from "@react-keycloak/web";
+
+// Componentes
 import Header from "./components/Header";
 import ToolList from "./components/ToolList";
 import AddTool from "./components/AddTool";
@@ -15,108 +17,126 @@ import AddClient from "./components/AddClient";
 import EditClient from "./components/EditClient";
 import KardexViewer from "./components/KardexViewer";
 
-const checkRole = (keycloak, roleName) => {
-  if (!keycloak || !keycloak.tokenParsed) return false;
-  
-  // 1. Buscar en Realm Roles (Nivel Global)
+// Material UI
+import { Container, CssBaseline, Box, Typography, Paper, CircularProgress, Button } from '@mui/material';
+
+// Utilidad de verificación de roles integrada
+const hasRequiredRole = (keycloak, roles) => {
+  if (!keycloak?.tokenParsed) return false;
   const realmRoles = keycloak.tokenParsed.realm_access?.roles || [];
-  
-  // 2. Buscar en Resource Roles (Nivel Cliente "toolrent-client")
   const resourceRoles = keycloak.tokenParsed.resource_access?.['toolrent-client']?.roles || [];
+  const allRoles = [...realmRoles, ...resourceRoles].map(r => r.toUpperCase());
   
-  // Juntamos todo y buscamos ignorando mayúsculas/minúsculas
-  const allRoles = [...realmRoles, ...resourceRoles];
-  return allRoles.some(r => r.toUpperCase() === roleName.toUpperCase());
+  return roles.some(role => allRoles.includes(role.toUpperCase()));
 };
 
+// Componente de Ruta Protegida (Heurística #1: Visibilidad del estado)
 function RequireAuth({ children, roles }) {
   const { keycloak, initialized } = useKeycloak();
 
   if (!initialized) {
-    return <div style={{padding: 20}}>Cargando autenticación...</div>;
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 10 }}>
+        <CircularProgress />
+        <Typography sx={{ mt: 2 }}>Cargando sesión segura...</Typography>
+      </Box>
+    );
   }
 
   if (!keycloak?.authenticated) {
     return <Navigate to="/" replace />;
   }
 
-  if (roles?.length) {
-    const hasPermission = roles.some((r) => checkRole(keycloak, r));
-    if (!hasPermission) return <h3 style={{padding:16}}>No autorizado (Faltan roles: {roles.join(", ")})</h3>;
+  if (roles && roles.length > 0) {
+    if (!hasRequiredRole(keycloak, roles)) {
+      return (
+        <Container maxWidth="md" sx={{ mt: 5 }}>
+          <Paper elevation={3} sx={{ p: 4, textAlign: 'center', borderTop: '5px solid #d32f2f' }}>
+            <Typography variant="h5" color="error" gutterBottom>Acceso Restringido</Typography>
+            <Typography variant="body1">
+              Tu cuenta no tiene los permisos suficientes para acceder a esta sección.
+              <br />Roles requeridos: <strong>{roles.join(", ")}</strong>
+            </Typography>
+            <Button variant="outlined" component={Link} to="/" sx={{ mt: 3 }}>Volver al Inicio</Button>
+          </Paper>
+        </Container>
+      );
+    }
   }
+
   return children;
-}
-
-function Menu() {
-  const { keycloak, initialized } = useKeycloak();
-
-  if (!initialized || !keycloak?.authenticated) return null;
-
-  // DEBUG: Esto mostrará en la consola del navegador (F12) tus roles exactos
-  const myRoles = keycloak.tokenParsed?.realm_access?.roles || [];
-  console.log("=== TUS ROLES ===", myRoles);
-
-  const isAdmin = checkRole(keycloak, "ADMIN");
-  const isUser = checkRole(keycloak, "USER");
-
-  return (
-    <nav style={{display:"flex",gap:12,padding:"8px 16px",borderBottom:"1px solid #eee", background: "#f9f9f9"}}>
-      <Link to="/tools">Herramientas</Link>
-      
-      {isAdmin && <Link to="/tools/add">Agregar herramienta</Link>}
-      
-      <Link to="/loans">Préstamos</Link>
-      
-      {isAdmin && <Link to="/clients">Clientes</Link>}
-      {isAdmin && <Link to="/tariffs">Tarifas</Link>}
-      
-      {(isUser || isAdmin) && <Link to="/loans/add">Registrar préstamo</Link>}
-      {(isUser || isAdmin) && <Link to="/reports">Reportes</Link>} 
-      {(isUser || isAdmin) && <Link to="/kardex">Kardex</Link>}
-    </nav>
-  );
 }
 
 export default function App() {
   return (
     <Router>
-      <Header />
-      <Menu />
-      <Routes>
-        <Route path="/" element={
-          <div style={{ padding: 16 }}>
-            <h2>Bienvenido a ToolRent</h2>
-            <p>Por favor, selecciona una opción del menú.</p>
-          </div>
-        } />
-        {/* --- Rutas de Herramientas --- */}
-        <Route path="/tools" element={<RequireAuth><ToolList /></RequireAuth>} />
-        <Route path="/tools/add" element={<RequireAuth roles={["ADMIN"]}><AddTool /></RequireAuth>} />
-        <Route path="/tools/edit/:id" element={<RequireAuth roles={["ADMIN"]}><EditTool /></RequireAuth>} />
-
-        {/* --- Rutas de Préstamos --- */}
-        <Route path="/loans" element={<RequireAuth><LoanList /></RequireAuth>} />
-        <Route path="/loans/add" element={<RequireAuth roles={["ADMIN","USER"]}><AddLoan /></RequireAuth>} />
-        <Route path="/loans/return/:id" element={<RequireAuth roles={["ADMIN", "USER"]}><ReturnLoan /></RequireAuth>} />
-
-        {/* --- Rutas de Clientes --- */}
-        <Route path="/clients" element={<RequireAuth roles={["ADMIN"]}><ClientList /></RequireAuth>} />
-        <Route path="/clients/add" element={<RequireAuth roles={["ADMIN"]}><AddClient /></RequireAuth>} />
-        <Route path="/clients/edit/:id" element={<RequireAuth roles={["ADMIN"]}><EditClient /></RequireAuth>} />
+      <CssBaseline />
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        minHeight: '100vh', 
+        backgroundColor: '#f8f9fa' // Fondo gris muy claro para mejor contraste (Heurística #8)
+      }}>
         
-        {/* --- Rutas de Tarifas, Reportes y Kardex--- */}
-        <Route path="/tariffs" element={<RequireAuth roles={["ADMIN"]}><TariffManager /></RequireAuth>} />
-        <Route path="/reports" element={<RequireAuth roles={["USER","ADMIN"]}><ReportViewer /></RequireAuth>} />
-        <Route path="/kardex" element={<RequireAuth roles={["ADMIN", "USER"]}><KardexViewer /></RequireAuth>} />
+        {/* Header único: Elimina la barra blanca antigua al no llamar más a <Menu /> */}
+        <Header />
 
-        {/* fallback */}
-        <Route path="*" element={
-            <div style={{ padding: 16 }}>
-                <h2>Página no encontrada</h2>
-                <Link to="/">Volver al inicio</Link>
-            </div>
-        } />
-      </Routes>
+        <Container maxWidth="lg" sx={{ mt: 3, mb: 6, flexGrow: 1 }}>
+          <Routes>
+            {/* Página de Bienvenida (Heurística #4) */}
+            <Route path="/" element={
+              <Box sx={{ textAlign: 'center', py: 8 }}>
+                <Paper elevation={0} sx={{ p: 5, backgroundColor: 'transparent' }}>
+                  <Typography variant="h2" component="h1" gutterBottom sx={{ fontWeight: 'bold', color: '#1976d2' }}>
+                    ToolRent
+                  </Typography>
+                  <Typography variant="h5" color="textSecondary" sx={{ mb: 4 }}>
+                    Sistema Profesional de Gestión y Préstamo de Herramientas
+                  </Typography>
+                  <Typography variant="body1">
+                    Utiliza la barra de navegación superior para gestionar el inventario, clientes y préstamos.
+                  </Typography>
+                </Paper>
+              </Box>
+            } />
+
+            {/* --- Módulo de Herramientas --- */}
+            <Route path="/tools" element={<RequireAuth><ToolList /></RequireAuth>} />
+            <Route path="/tools/add" element={<RequireAuth roles={["ADMIN"]}><AddTool /></RequireAuth>} />
+            <Route path="/tools/edit/:id" element={<RequireAuth roles={["ADMIN"]}><EditTool /></RequireAuth>} />
+
+            {/* --- Módulo de Préstamos --- */}
+            <Route path="/loans" element={<RequireAuth><LoanList /></RequireAuth>} />
+            <Route path="/loans/add" element={<RequireAuth roles={["ADMIN","USER"]}><AddLoan /></RequireAuth>} />
+            <Route path="/loans/return/:id" element={<RequireAuth roles={["ADMIN", "USER"]}><ReturnLoan /></RequireAuth>} />
+
+            {/* --- Módulo de Clientes --- */}
+            <Route path="/clients" element={<RequireAuth roles={["ADMIN"]}><ClientList /></RequireAuth>} />
+            <Route path="/clients/add" element={<RequireAuth roles={["ADMIN"]}><AddClient /></RequireAuth>} />
+            <Route path="/clients/edit/:id" element={<RequireAuth roles={["ADMIN"]}><EditClient /></RequireAuth>} />
+            
+            {/* --- Administración y Reportes --- */}
+            <Route path="/tariffs" element={<RequireAuth roles={["ADMIN"]}><TariffManager /></RequireAuth>} />
+            <Route path="/reports" element={<RequireAuth roles={["ADMIN","USER"]}><ReportViewer /></RequireAuth>} />
+            <Route path="/kardex" element={<RequireAuth roles={["ADMIN", "USER"]}><KardexViewer /></RequireAuth>} />
+
+            {/* Error 404 (Heurística #9: Ayudar a recuperarse de errores) */}
+            <Route path="*" element={
+              <Box sx={{ textAlign: 'center', mt: 10 }}>
+                <Typography variant="h4" gutterBottom>404 - Página no encontrada</Typography>
+                <Button variant="contained" component={Link} to="/">Ir al Inicio</Button>
+              </Box>
+            } />
+          </Routes>
+        </Container>
+
+        {/* Footer simple para consistencia visual (Heurística #4) */}
+        <Box component="footer" sx={{ py: 3, textAlign: 'center', backgroundColor: '#fff', borderTop: '1px solid #e0e0e0' }}>
+          <Typography variant="body2" color="textSecondary">
+            © 2026 Sistema de Gestión de Herramientas - Evaluación 3
+          </Typography>
+        </Box>
+      </Box>
     </Router>
   );
 }

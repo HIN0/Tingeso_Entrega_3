@@ -69,7 +69,7 @@ public class ToolController {
         return toolService.adjustStock(id, request.quantityChange(), type, currentUser);
     }
 
-    @PutMapping("/{id}/decommission")
+    @PatchMapping("/{id}/decommission")
     @PreAuthorize("hasRole('ADMIN')")
     public ToolEntity decommissionTool(@PathVariable Long id, Authentication authentication) {
         UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);

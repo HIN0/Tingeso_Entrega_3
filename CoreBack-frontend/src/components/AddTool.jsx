@@ -1,159 +1,169 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import ToolService from "../services/tool.service";
 import { useNavigate } from "react-router-dom";
+import { 
+  Box, Typography, TextField, Button, Paper, Grid, 
+  InputAdornment, Snackbar, Alert, CircularProgress 
+} from '@mui/material';
+import SaveIcon from '@mui/icons-material/Save';
+import CancelIcon from '@mui/icons-material/Cancel';
+import ConstructionIcon from '@mui/icons-material/Construction';
+import CategoryIcon from '@mui/icons-material/Category';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 
-// --- FUNCIÓN AUXILIAR PARA DAR FORMATO A LOS ERRORES DE VALIDACIÓN ---
 const formatValidationErrors = (errors) => {
-    if (!errors || typeof errors !== 'object') {
-        return "Validation failed with an unknown error.";
-    }
-    let errorString = "Validation Errors:\n";
-    for (const field in errors) {
-        // Formatea el nombre del campo para que sea más legible (ej: "replacementValue" -> "Replacement Value")
-        const formattedField = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-        errorString += `• ${formattedField}: ${errors[field]}\n`;
-    }
-    return errorString.trim();
+  if (!errors || typeof errors !== 'object') return "Error desconocido en la validación.";
+  let errorString = "";
+  for (const field in errors) {
+    const formattedField = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+    errorString += `• ${formattedField}: ${errors[field]}\n`;
+  }
+  return errorString.trim();
 };
-// ----------------------------------------------------------------------
-
 
 function AddTool() {
   const [tool, setTool] = useState({
     name: "",
     category: "",
-    replacementValue: 0,
-    stock: 0,
-    inRepair: 0 // <--- 1. Inicializar el nuevo campo a 0
+    replacementValue: "", // Iniciamos vacío para evitar el 0 antepuesto
+    stock: "",
+    inRepair: 0 
   });
-  const [error, setError] = useState("");
+  
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [notificacion, setNotificacion] = useState({ open: false, text: '', severity: 'error' });
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    // 2. Asegurarse que los campos numéricos (incluyendo inRepair si lo añades como input) se parseen
-    const value = (e.target.name === 'stock' || e.target.name === 'replacementValue' || e.target.name === 'inRepair')
-                  ? parseInt(e.target.value) || 0
-                  : e.target.value;
-    setTool({ ...tool, [e.target.name]: value });
+    const { name, value } = e.target;
+    // Si es numérico, permitimos el string vacío para sobreescribir el 0
+    const isNumericField = ['stock', 'replacementValue', 'inRepair'].includes(name);
+    const val = isNumericField ? (value === "" ? "" : parseInt(value) || 0) : value;
+    
+    setTool({ ...tool, [name]: val });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setError("");
+    setLoading(true);
+    setErrorMsg("");
 
-    // Puedes añadir validaciones si es necesario para inRepair aquí
-    if (tool.stock < 0 || tool.replacementValue < 0 || tool.inRepair < 0) {
-        setError("Stock, Replacement Value (and In Repair) cannot be negative.");
-        return;
-    }
-     if (tool.replacementValue < 1000) { // Validacion Min(1000) del backend
-        setError("Replacement Value must be at least 1000.");
-        return;
+    // Validaciones funcionales (Heurística #5)
+    if (tool.replacementValue < 1000) {
+      setNotificacion({ open: true, text: "El valor de reposición debe ser al menos 1000.", severity: 'warning' });
+      setLoading(false);
+      return;
     }
 
-
-    // 3. El objeto 'tool' ya incluye 'inRepair' por el estado inicializado
     ToolService.create(tool)
       .then(() => {
-        navigate("/tools");
+        // 1. Mostrar mensaje de éxito en pantalla
+        setNotificacion({ 
+          open: true, 
+          text: "¡Herramienta registrada exitosamente!", 
+          severity: 'success' 
+        });
+
+        // 2. Esperar 2 segundos (tiempo prudente) antes de redirigir
+        setTimeout(() => {
+          navigate("/tools");
+        }, 5000); 
       })
       .catch((err) => {
-        console.error("Error creating tool:", err);
-        
         const backendErrors = err.response?.data?.fieldErrors;
-        let errorMsg;
-        
-        if (backendErrors) {
-            // --- LÓGICA CORREGIDA: Usar la función para formatear errores ---
-            errorMsg = formatValidationErrors(backendErrors);
-        } else {
-            // Lógica para otros tipos de errores (Bad Request, Internal Server, etc.)
-            errorMsg = err.response?.data?.message || 
-                       err.response?.data?.error || 
-                       err.response?.data || 
-                       "Failed to create tool. Please check the data.";
-        }
-        
-        setError(errorMsg);
-      });
+        const msg = backendErrors ? formatValidationErrors(backendErrors) : (err.response?.data?.message || "Error al crear la herramienta.");
+        setErrorMsg(msg);
+        setNotificacion({ open: true, text: "Error en el formulario", severity: 'error' });
+      })
+      .finally(() => setLoading(false));
   };
 
+  // Heurística #5: Prevención de errores (Deshabilitar si faltan campos)
+  const isFormInvalid = !tool.name || !tool.category || tool.stock === "" || tool.replacementValue === "";
+
   return (
-    <div style={{ padding: 16 }}>
-      <h2>Add Tool</h2>
-      {/* Renderizado mejorado para mostrar los errores con saltos de línea */}
-      {error && (
-        <div style={{ color: 'red', whiteSpace: 'pre-wrap', border: '1px solid red', padding: '10px', marginBottom: '15px' }}>
-          <strong>Error:</strong><br/>{error}
-        </div>
-      )}
-      <form onSubmit={handleSubmit}>
-        {/* ... Inputs para name, category ... */}
-         <div>
-          <label>Name: </label>
-          <input
-            type="text"
-            name="name"
-            value={tool.name}
-            onChange={handleChange}
-            required
-          />
-        </div>
+    <Box sx={{ maxWidth: 800, mx: 'auto', mt: 3 }}>
+      <Snackbar 
+        open={notificacion.open} 
+        autoHideDuration={5000} 
+        onClose={() => setNotificacion({ ...notificacion, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity={notificacion.severity} variant="filled">{notificacion.text}</Alert>
+      </Snackbar>
 
-        <div>
-          <label>Category: </label>
-          <input
-            type="text"
-            name="category"
-            value={tool.category}
-            onChange={handleChange}
-            required
-          />
-        </div>
+      <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3 }}>Agregar Nueva Herramienta</Typography>
 
-        <div>
-          <label>Initial Stock: </label>
-          <input
-            type="number"
-            name="stock"
-            value={tool.stock}
-            onChange={handleChange}
-            required
-            min="0" // Permitir 0 pero validar >= 0 en handleSubmit o backend
-          />
-        </div>
+      <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
+        {errorMsg && (
+          <Alert severity="error" sx={{ mb: 3, whiteSpace: 'pre-wrap' }}>
+            <strong>Errores de Validación:</strong><br/>{errorMsg}
+          </Alert>
+        )}
 
-        <div>
-          <label>Replacement Value: </label>
-          <input
-            type="number"
-            name="replacementValue"
-            value={tool.replacementValue}
-            onChange={handleChange}
-            required
-            min="1000" // Mantener la validación del backend
-          />
-        </div>
+        <Box component="form" onSubmit={handleSubmit} noValidate>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth label="Nombre" name="name" value={tool.name} onChange={handleChange} required
+                error={tool.name === ""} helperText={tool.name === "" ? "Ingrese nombre" : ""}
+                InputProps={{ startAdornment: <InputAdornment position="start"><ConstructionIcon color="primary" /></InputAdornment> }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth label="Categoría" name="category" value={tool.category} onChange={handleChange} required
+                error={tool.category === ""} helperText={tool.category === "" ? "Ingrese categoría" : ""}
+                InputProps={{ startAdornment: <InputAdornment position="start"><CategoryIcon color="primary" /></InputAdornment> }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth label="Stock Inicial" name="stock" type="number" value={tool.stock} onChange={handleChange} required
+                error={tool.stock === ""} helperText={tool.stock === "" ? "Ingrese valor" : ""}
+                sx={{ "& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button": { display: "none" }, "& input[type=number]": { MozAppearance: "textfield" } }}
+                InputProps={{ startAdornment: <InputAdornment position="start"><InventoryIcon color="primary" /></InputAdornment> }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth label="Valor de Reposición" name="replacementValue" type="number" value={tool.replacementValue} onChange={handleChange} required
+                error={tool.replacementValue === ""} helperText={tool.replacementValue === "" ? "Ingrese valor" : ""}
+                sx={{ "& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button": { display: "none" }, "& input[type=number]": { MozAppearance: "textfield" } }}
+                InputProps={{ 
+                    startAdornment: (
+                        <InputAdornment position="start">
+                            <AttachMoneyIcon color="primary" />
+                        </InputAdornment>
+                    ) 
+                }}
+              />
+            </Grid>
 
-        {/* 4. PUEDE SER QUIZA: Añadir un input para 'inRepair' si el usuario debe definirlo.
-           Si siempre es 0 al crear, no necesitas un input, solo inicializarlo en el estado. */}
-        {/*
-        <div>
-          <label>Initial In Repair: </label>
-          <input
-            type="number"
-            name="inRepair"
-            value={tool.inRepair}
-            onChange={handleChange}
-            required
-            min="0"
-          />
-        </div>
-        */}
-
-        <button type="submit" style={{ marginTop: '15px' }}>Save</button>
-      </form>
-    </div>
+            <Grid item xs={12}>
+              <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 3 }}>
+                <Button
+                  type="submit" variant="contained" color="primary"
+                  startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+                  disabled={isFormInvalid || loading} sx={{ px: 4 }}
+                >
+                  Guardar Herramienta
+                </Button>
+                <Button
+                  variant="contained" color="error"
+                  startIcon={<CancelIcon />} onClick={() => navigate("/tools")}
+                  sx={{ px: 4 }}
+                >
+                  Cancelar
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </Box>
+      </Paper>
+    </Box>
   );
 }
 
