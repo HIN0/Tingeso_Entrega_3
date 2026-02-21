@@ -144,6 +144,8 @@ function ClientList() {
               <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>ID</TableCell>
               <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>RUT</TableCell>
               <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>Nombre</TableCell>
+              <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>Teléfono</TableCell>
+              <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>Correo</TableCell>
               <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>Estado</TableCell>
               <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>Acciones</TableCell>
             </TableRow>
@@ -165,6 +167,9 @@ function ClientList() {
                   <TableCell align="center">{client.id}</TableCell>
                   <TableCell align="center">{client.rut}</TableCell>
                   <TableCell align="center">{client.name}</TableCell>
+                  <TableCell align="center">{client.phone}</TableCell>
+                  <TableCell align="center">{client.email}</TableCell>
+
                   <TableCell align="center">
                     <Chip label={client.status} color={client.status === 'ACTIVE' ? 'success' : 'error'} size="small" />
                   </TableCell>
