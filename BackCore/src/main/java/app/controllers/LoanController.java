@@ -17,6 +17,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/loans")
+@PreAuthorize("hasAnyRole('ADMIN', 'USER')")
 public class LoanController {
 
     private final LoanService loanService;
@@ -28,7 +29,6 @@ public class LoanController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public List<LoanEntity> getAllLoans() {
         List<LoanEntity> active = loanService.getActiveLoans();
         List<LoanEntity> late = loanService.getLateLoans();
@@ -37,28 +37,24 @@ public class LoanController {
         }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<LoanEntity> getLoanById(@PathVariable Long id) {
         LoanEntity loan = loanService.getLoanById(id);
         return ResponseEntity.ok(loan);
     }
 
     @GetMapping("/client/{clientId}/unpaid")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<List<LoanEntity>> getUnpaidLoansForClient(@PathVariable Long clientId) {
         List<LoanEntity> unpaidLoans = loanService.getUnpaidReceivedLoansByClientId(clientId);
         return ResponseEntity.ok(unpaidLoans);
     }
 
     @PostMapping(consumes = "application/json", produces = "application/json")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public LoanEntity createLoanJson(@RequestBody @Valid LoanRequest req, Authentication authentication) {
         UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
         return loanService.createLoan(req.clientId(), req.toolId(), req.startDate(), req.dueDate(), currentUser);
     }
 
     @PutMapping(path = "/{id}/return", consumes = "application/json", produces = "application/json")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public LoanEntity returnLoanJson(@PathVariable Long id, @RequestBody @Valid ReturnLoanRequest req, Authentication authentication) {
         UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
         return loanService.returnLoan(
@@ -72,7 +68,6 @@ public class LoanController {
         }
 
     @PatchMapping("/{loanId}/pay")
-    @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<LoanEntity> markLoanAsPaid(@PathVariable Long loanId) {
         LoanEntity updatedLoan = loanService.markLoanAsPaid(loanId);
         // Devuelve el préstamo actualizado (con estado CLOSED y penalty 0)

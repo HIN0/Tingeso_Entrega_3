@@ -17,10 +17,6 @@ class ToolService {
     return http.put(`/tools/${id}`, data);
   }
 
-  delete(id) {
-    return http.delete(`/tools/${id}`);
-  }
-
   decommission(id) {
     return http.patch(`/tools/${id}/decommission`);
   }

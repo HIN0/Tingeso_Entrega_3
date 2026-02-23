@@ -111,9 +111,9 @@ export default function App() {
             <Route path="/loans/return/:id" element={<RequireAuth roles={["ADMIN", "USER"]}><ReturnLoan /></RequireAuth>} />
 
             {/* --- Módulo de Clientes --- */}
-            <Route path="/clients" element={<RequireAuth roles={["ADMIN"]}><ClientList /></RequireAuth>} />
-            <Route path="/clients/add" element={<RequireAuth roles={["ADMIN"]}><AddClient /></RequireAuth>} />
-            <Route path="/clients/edit/:id" element={<RequireAuth roles={["ADMIN"]}><EditClient /></RequireAuth>} />
+            <Route path="/clients" element={<RequireAuth><ClientList /></RequireAuth>} />
+            <Route path="/clients/add" element={<RequireAuth roles={["ADMIN","USER"]}><AddClient /></RequireAuth>} />
+            <Route path="/clients/edit/:id" element={<RequireAuth roles={["ADMIN","USER"]}><EditClient /></RequireAuth>} />
             
             {/* --- Administración y Reportes --- */}
             <Route path="/tariffs" element={<RequireAuth roles={["ADMIN"]}><TariffManager /></RequireAuth>} />

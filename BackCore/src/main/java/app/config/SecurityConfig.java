@@ -46,9 +46,8 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.PUT,    TOOLS_PATH).hasRole(ROLE_ADMIN)
             .requestMatchers(HttpMethod.PATCH,  TOOLS_PATH).hasRole(ROLE_ADMIN)
             .requestMatchers(HttpMethod.DELETE, TOOLS_PATH).hasRole(ROLE_ADMIN)
-            .requestMatchers("/tariffs/**", "/clients/**").hasRole(ROLE_ADMIN)
-            .requestMatchers("/kardex/**", "/returns/**", "/reports/**").hasAnyRole(ROLE_ADMIN, ROLE_EMPLOYEE)
-            .requestMatchers("/users/**").hasRole(ROLE_ADMIN)
+            .requestMatchers("/clients/**","/kardex/**", "/returns/**", "/reports/**").hasAnyRole(ROLE_ADMIN, ROLE_EMPLOYEE)
+            .requestMatchers("/tariffs/**","/users/**").hasRole(ROLE_ADMIN)
 
             .anyRequest().authenticated()
         )

@@ -16,7 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/clients")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'USER')")
 public class ClientController {
 
     private final ClientService clientService;

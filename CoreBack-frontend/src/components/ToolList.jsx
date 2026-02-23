@@ -220,7 +220,7 @@ return (
                     </>
                     )}
 
-                    <Tooltip title="Eliminar/Baja">
+                    <Tooltip title="Dar De Baja">
                     <span>
                         <IconButton 
                         color="error" 

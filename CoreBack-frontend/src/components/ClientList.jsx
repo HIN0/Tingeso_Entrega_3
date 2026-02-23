@@ -203,11 +203,11 @@ function ClientList() {
             }}
           />
 
-          {isAdmin && (
+          {isAdmin || isEmployee ? (
             <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => navigate("/clients/add")} sx={{ borderRadius: 2, px: 3 }}>
               Registrar Cliente
             </Button>
-          )}
+          ) : null}
         </Box>
       </Box>
 
@@ -252,7 +252,7 @@ function ClientList() {
                       </TableCell>
                       <TableCell align="center">
                         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                          {isAdmin && (
+                          {isAdmin || isEmployee ? (
                             <>
                               <Tooltip title="Editar Perfil"><IconButton color="primary" onClick={() => navigate(`/clients/edit/${client.id}`)} sx={{ bgcolor: '#e3f2fd' }}><EditIcon /></IconButton></Tooltip>
                               <Tooltip title={client.status === 'ACTIVE' ? 'Restringir Cliente' : 'Intentar Reactivación'}>
@@ -265,7 +265,7 @@ function ClientList() {
                                 </IconButton>
                               </Tooltip>
                             </>
-                          )}
+                          ): null }
                           {(isAdmin || isEmployee) && client.status === 'RESTRICTED' && (
                             <Tooltip title={visibleDebtsClientId === client.id ? 'Cerrar Panel de Deudas' : 'Ver Deudas Pendientes'}>
                               <IconButton color="secondary" sx={{ bgcolor: '#f3e5f5' }} onClick={() => setVisibleDebtsClientId(visibleDebtsClientId === client.id ? null : client.id)}>
