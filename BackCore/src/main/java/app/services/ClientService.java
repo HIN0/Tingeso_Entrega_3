@@ -90,14 +90,14 @@ public class ClientService {
         // 3. Verificar si tiene préstamos ATRASADOS (LATE)
         long lateLoanCount = loanRepository.countByClientAndStatus(client, LoanStatus.LATE);
         if (lateLoanCount > 0) {
-            throw new InvalidOperationException("Cannot reactivate client: " + lateLoanCount + " late loan(s) found.");
+            throw new InvalidOperationException("No se puede reactivar al cliente: " + lateLoanCount + " préstamo(s) atrasado(s) encontrado(s).");
         }
 
         // 4. Verificar si tiene deudas PENDIENTES (RECEIVED con totalPenalty > 0)
         List<LoanEntity> unpaidReceivedLoans = loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(
                 client, LoanStatus.RECEIVED, 0.0);
         if (!unpaidReceivedLoans.isEmpty()) {
-            throw new InvalidOperationException("Cannot reactivate client: " + unpaidReceivedLoans.size() + " unpaid loan(s) found.");
+            throw new InvalidOperationException("No se puede reactivar al cliente: " + unpaidReceivedLoans.size() + " préstamo(s) sin pagar encontrado(s).");
         }
 
         // 5. Si pasa las validaciones, reactivar el cliente
