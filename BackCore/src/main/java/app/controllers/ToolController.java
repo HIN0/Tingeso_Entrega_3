@@ -38,7 +38,7 @@ public class ToolController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ToolEntity createTool(@Valid @RequestBody ToolEntity tool, Authentication authentication) {
         UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
         return toolService.createTool(tool, currentUser);

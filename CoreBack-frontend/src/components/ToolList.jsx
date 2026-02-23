@@ -30,6 +30,7 @@ const [toolToDecommission, setToolToDecommission] = useState(null);
 const navigate = useNavigate();
 const { keycloak, initialized } = useKeycloak();
 const isAdmin = initialized && keycloak?.authenticated && keycloak.hasRealmRole("ADMIN");
+const isUser = initialized && keycloak?.authenticated && keycloak.hasRealmRole("USER");
 
 const loadTools = () => {
     ToolService.getAll()
@@ -120,11 +121,11 @@ return (
 
     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1a237e' }}>Inventario de Herramientas</Typography>
-        {isAdmin && (
+        {isAdmin || isUser ? (
         <Button variant="contained" size="large" startIcon={<AddIcon />} onClick={() => navigate('/tools/add')} sx={{ borderRadius: 2, px: 4 }}>
             Nueva Herramienta
         </Button>
-        )}
+        ) : null}
     </Box>
 
     <Typography variant="h6" sx={{ color: '#2e7d32', mb: 2, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -138,8 +139,8 @@ return (
             <TableRow>
             <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
             <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
-            <TableCell sx={{ fontWeight: 'bold' }}>Categoría</TableCell>
-            <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
+            <TableCell align='center' sx={{ fontWeight: 'bold' }}>Categoría</TableCell>
+            <TableCell align='center' sx={{ fontWeight: 'bold' }}>Estado</TableCell>
             <TableCell align="center" sx={{ fontWeight: 'bold' }}>Stock Total</TableCell>
             <TableCell align="center" sx={{ fontWeight: 'bold' }}>En Reparación</TableCell>
             <TableCell align="center" sx={{ fontWeight: 'bold' }}>Valor Reposición</TableCell>
@@ -159,8 +160,8 @@ return (
             <TableRow key={tool.id} hover>
                 <TableCell>{tool.id}</TableCell>
                 <TableCell sx={{ fontWeight: 'medium' }}>{tool.name}</TableCell>
-                <TableCell><Chip label={tool.category} size="small" variant="outlined" /></TableCell>
-                <TableCell>{getStatusChip(tool.status)}</TableCell>
+                <TableCell align="center"><Chip label={tool.category} size="small" variant="outlined" /></TableCell>
+                <TableCell align="center">{getStatusChip(tool.status)}</TableCell>
                 <TableCell align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{tool.stock}</TableCell>
                 <TableCell align="center">{tool.inRepair}</TableCell>
                 <TableCell align="center">${tool.replacementValue}</TableCell>

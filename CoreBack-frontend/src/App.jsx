@@ -46,7 +46,7 @@ function RequireAuth({ children, roles }) {
   if (!keycloak?.authenticated) {
     return <Navigate to="/" replace />;
   }
-
+  // Necesario?
   if (roles && roles.length > 0) {
     if (!hasRequiredRole(keycloak, roles)) {
       return (
@@ -102,7 +102,7 @@ export default function App() {
 
             {/* --- Módulo de Herramientas --- */}
             <Route path="/tools" element={<RequireAuth><ToolList /></RequireAuth>} />
-            <Route path="/tools/add" element={<RequireAuth roles={["ADMIN"]}><AddTool /></RequireAuth>} />
+            <Route path="/tools/add" element={<RequireAuth roles={["ADMIN","USER"]}><AddTool /></RequireAuth>} />
             <Route path="/tools/edit/:id" element={<RequireAuth roles={["ADMIN"]}><EditTool /></RequireAuth>} />
 
             {/* --- Módulo de Préstamos --- */}

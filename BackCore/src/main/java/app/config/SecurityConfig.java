@@ -42,7 +42,7 @@ public class SecurityConfig {
             
             // Reglas de negocio
             .requestMatchers(HttpMethod.GET, "/loans/**", TOOLS_PATH).hasAnyRole(ROLE_ADMIN, ROLE_EMPLOYEE)
-            .requestMatchers(HttpMethod.POST,   TOOLS_PATH).hasRole(ROLE_ADMIN)
+            .requestMatchers(HttpMethod.POST,   TOOLS_PATH).hasAnyRole(ROLE_ADMIN, ROLE_EMPLOYEE)
             .requestMatchers(HttpMethod.PUT,    TOOLS_PATH).hasRole(ROLE_ADMIN)
             .requestMatchers(HttpMethod.PATCH,  TOOLS_PATH).hasRole(ROLE_ADMIN)
             .requestMatchers(HttpMethod.DELETE, TOOLS_PATH).hasRole(ROLE_ADMIN)

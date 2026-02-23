@@ -51,12 +51,12 @@ const Header = () => {
             <Button color="inherit" component={Link} to="/tools" sx={{ fontSize: '0.85rem', px: 1.5 }}>Herramientas</Button>
             <Button color="inherit" component={Link} to="/loans" sx={{ fontSize: '0.85rem', px: 1.5 }}>Préstamos</Button>
             <Button color="inherit" component={Link} to="/clients" sx={{ fontSize: '0.85rem', px: 1.5 }}>Clientes</Button>
+            <Button color="inherit" component={Link} to="/reports" sx={{ fontSize: '0.85rem', px: 1.5 }}>Reportes</Button>
+            <Button color="inherit" component={Link} to="/kardex" sx={{ fontSize: '0.85rem', px: 1.5 }}>Kardex</Button>
             
             {isAdmin && (
               <Box sx={{ display: 'flex', gap: 0.5 }}>
                 <Button color="inherit" component={Link} to="/tariffs" sx={{ fontSize: '0.85rem', px: 1.5 }}>Tarifas</Button>
-                <Button color="inherit" component={Link} to="/reports" sx={{ fontSize: '0.85rem', px: 1.5 }}>Reportes</Button>
-                <Button color="inherit" component={Link} to="/kardex" sx={{ fontSize: '0.85rem', px: 1.5 }}>Kardex</Button>
               </Box>
             )}
           </Box>
