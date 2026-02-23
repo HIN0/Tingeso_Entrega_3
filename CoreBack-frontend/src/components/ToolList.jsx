@@ -20,9 +20,10 @@ const ToolList = () => {
 const [activeTools, setActiveTools] = useState([]);
 const [decommissionedTools, setDecommissionedTools] = useState([]);
 const [error, setError] = useState({ open: false, text: '', severity: 'error' });
-const [adjustment, setAdjustment] = useState({ id: null, quantity: 1, type: null });
 
-// ESTADO PARA EL DIÁLOGO DE CONFIRMACIÓN (Heurística #5)
+// Ajuste de stock: quantity inicia vacío para cumplir con tu requerimiento
+const [adjustment, setAdjustment] = useState({ id: null, quantity: "", type: null });
+
 const [confirmOpen, setConfirmOpen] = useState(false);
 const [toolToDecommission, setToolToDecommission] = useState(null);
 
@@ -49,7 +50,6 @@ useEffect(() => {
     }
 }, [initialized, keycloak.authenticated]);
 
-// Apertura del diálogo amigable
 const openDecommissionDialog = (tool) => {
     setToolToDecommission(tool);
     setConfirmOpen(true);
@@ -57,7 +57,6 @@ const openDecommissionDialog = (tool) => {
 
 const handleDecommissionConfirm = () => {
     if (!toolToDecommission) return;
-    
     ToolService.decommission(toolToDecommission.id)
     .then(() => {
         setError({ open: true, text: `"${toolToDecommission.name}" dada de baja con éxito`, severity: 'success' });
@@ -72,10 +71,14 @@ const handleDecommissionConfirm = () => {
 };
 
 const applyStockAdjustment = () => {
-    const quantityChange = adjustment.type === 'INCREASE' ? adjustment.quantity : -adjustment.quantity;
+    // Validación de seguridad: No procesar si está vacío o no es un número positivo
+    if (adjustment.quantity === "" || parseInt(adjustment.quantity) <= 0) return;
+
+    const quantityChange = adjustment.type === 'INCREASE' ? parseInt(adjustment.quantity) : -parseInt(adjustment.quantity);
+    
     ToolService.adjustStock(adjustment.id, { quantityChange })
     .then(() => {
-        setAdjustment({ id: null, quantity: 1, type: null });
+        setAdjustment({ id: null, quantity: "", type: null });
         loadTools();
     })
     .catch(e => {
@@ -94,17 +97,16 @@ return (
         <Alert severity={error.severity} variant="filled" sx={{ width: '100%' }}>{error.text}</Alert>
     </Snackbar>
 
-    {/* DIÁLOGO PROFESIONAL (Heurística #5) */}
     <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} TransitionComponent={Zoom}>
         <DialogTitle sx={{ fontWeight: 'bold', color: '#d32f2f' }}>¿Confirmar baja de herramienta?</DialogTitle>
         <DialogContent>
         <DialogContentText>
-            Esta acción marcará <strong>{toolToDecommission?.name}</strong> como fuera de servicio permanentemente. Esta acción no se puede deshacer.
+            Esta acción marcará <strong>{toolToDecommission?.name}</strong> como fuera de servicio permanentemente.
         </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
         <Button onClick={() => setConfirmOpen(false)} variant="outlined">Cancelar</Button>
-        <Button onClick={handleDecommissionConfirm} color="error" variant="contained" autoFocus>Dar de Baja</Button>
+        <Button onClick={handleDecommissionConfirm} color="error" variant="contained">Dar de Baja</Button>
         </DialogActions>
     </Dialog>
 
@@ -131,8 +133,8 @@ return (
             <TableCell sx={{ fontWeight: 'bold' }}>Categoría</TableCell>
             <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
             <TableCell align="center" sx={{ fontWeight: 'bold' }}>Stock Total</TableCell>
-            <TableCell align="center" sx={{ fontWeight: 'bold' }}>En Reparacion</TableCell>
-            <TableCell align="center" sx={{ fontWeight: 'bold' }}>Valor Reposición</TableCell>
+            <TableCell align="center" sx={{ fontWeight: 'bold' }}>En Taller</TableCell>
+            <TableCell align="center" sx={{ fontWeight: 'bold' }}>Valor Rep.</TableCell>
             {isAdmin && <TableCell align="center" sx={{ fontWeight: 'bold' }}>Operaciones</TableCell>}
             </TableRow>
         </TableHead>
@@ -157,24 +159,55 @@ return (
                 {isAdmin && (
                 <TableCell align="center">
                 <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', alignItems: 'center' }}>
+                    
                     <Tooltip title="Editar"><IconButton size="small" color="primary" sx={{ bgcolor: '#e3f2fd' }} onClick={() => navigate(`/tools/edit/${tool.id}`)}><EditIcon /></IconButton></Tooltip>
                     
                     {adjustment.id === tool.id ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#fff', border: '2px solid #2e7d32', p: 0.8, borderRadius: 2, boxShadow: 2 }}>
-                        <TextField
-                        type="number" size="small" autoFocus
-                        value={adjustment.quantity}
-                        onChange={(e) => setAdjustment({...adjustment, quantity: parseInt(e.target.value) || 1})}
-                        sx={{ width: 80 }} 
-                        inputProps={{ min: 1, style: { textAlign: 'center', fontWeight: 'bold' } }}
-                        />
-                        <IconButton color="success" onClick={applyStockAdjustment}><CheckIcon /></IconButton>
-                        <IconButton color="error" onClick={() => setAdjustment({ id: null, quantity: 1, type: null })}><CloseIcon /></IconButton>
-                    </Box>
+                    <Zoom in={true}>
+                        <Box sx={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center', 
+                        bgcolor: '#fff', 
+                        border: `2px solid ${adjustment.type === 'INCREASE' ? '#2e7d32' : '#ed6c02'}`, 
+                        p: 1.5, 
+                        borderRadius: 2, 
+                        boxShadow: 3,
+                        minWidth: 160 
+                        }}>
+                        <Typography variant="caption" sx={{ fontWeight: 'bold', mb: 1, textTransform: 'uppercase', color: adjustment.type === 'INCREASE' ? '#2e7d32' : '#ed6c02' }}>
+                            {adjustment.type === 'INCREASE' ? 'Aumentando stock' : 'Disminuyendo stock'}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <TextField
+                            type="number" size="small" autoFocus
+                            value={adjustment.quantity}
+                            onChange={(e) => setAdjustment({...adjustment, quantity: e.target.value})}
+                            sx={{ 
+                                width: 100,
+                                "& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button": { display: "none" },
+                                "& input[type=number]": { MozAppearance: "textfield" }
+                            }} 
+                            inputProps={{ style: { textAlign: 'center', fontWeight: 'bold' } }}
+                            />
+                            {/* Heurística #5: Botón deshabilitado si no hay valor válido */}
+                            <IconButton 
+                            color="success" 
+                            onClick={applyStockAdjustment}
+                            disabled={adjustment.quantity === "" || parseInt(adjustment.quantity) <= 0}
+                            >
+                            <CheckIcon />
+                            </IconButton>
+                            <IconButton color="error" onClick={() => setAdjustment({ id: null, quantity: "", type: null })}>
+                            <CloseIcon />
+                            </IconButton>
+                        </Box>
+                        </Box>
+                    </Zoom>
                     ) : (
                     <>
-                        <Tooltip title="Añadir Stock"><IconButton color="success" sx={{ bgcolor: '#e8f5e9' }} onClick={() => setAdjustment({ id: tool.id, quantity: 1, type: 'INCREASE' })}><AddCircleIcon /></IconButton></Tooltip>
-                        <Tooltip title="Retirar Stock"><IconButton color="warning" sx={{ bgcolor: '#fff3e0' }} onClick={() => setAdjustment({ id: tool.id, quantity: 1, type: 'DECREASE' })}><RemoveCircleIcon /></IconButton></Tooltip>
+                        <Tooltip title="Añadir Stock"><IconButton color="success" sx={{ bgcolor: '#e8f5e9' }} onClick={() => setAdjustment({ id: tool.id, quantity: "", type: 'INCREASE' })}><AddCircleIcon /></IconButton></Tooltip>
+                        <Tooltip title="Retirar Stock"><IconButton color="warning" sx={{ bgcolor: '#fff3e0' }} onClick={() => setAdjustment({ id: tool.id, quantity: "", type: 'DECREASE' })}><RemoveCircleIcon /></IconButton></Tooltip>
                     </>
                     )}
 
@@ -217,7 +250,7 @@ return (
         </TableHead>
         <TableBody>
             {decommissionedTools.map(tool => (
-            <TableRow key={tool.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+            <TableRow key={tool.id}>
                 <TableCell>{tool.id}</TableCell>
                 <TableCell color="textSecondary">{tool.name}</TableCell>
                 <TableCell>{tool.category}</TableCell>
