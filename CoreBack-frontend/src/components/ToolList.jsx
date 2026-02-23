@@ -78,6 +78,14 @@ const applyStockAdjustment = () => {
     
     ToolService.adjustStock(adjustment.id, { quantityChange })
     .then(() => {
+        // NOTIFICACIÓN DE ÉXITO (Justo lo que faltaba)
+        const accion = adjustment.type === 'INCREASE' ? 'aumentado' : 'disminuido';
+        setError({ 
+            open: true, 
+            text: `Stock ${accion} exitosamente`, 
+            severity: 'success' 
+        });
+
         setAdjustment({ id: null, quantity: "", type: null });
         loadTools();
     })
