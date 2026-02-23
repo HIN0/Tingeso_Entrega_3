@@ -47,7 +47,7 @@ function TariffManager() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // CORRECCIÓN SONAR: Uso de Number.parseInt con base decimal
+    // Mantenemos Number.parseInt para cumplir con la regla S7773
     const numericValue = value === "" ? "" : Number.parseInt(value, 10);
     setTariffs({ ...tariffs, [name]: numericValue });
   };
@@ -64,9 +64,10 @@ function TariffManager() {
       .catch((err) => showMsg(`Error al actualizar: ${err.message}`, "error"));
   };
 
-  // CORRECCIÓN SONAR: Lógica de validación robusta y uso de Number.isNaN
+  // CORRECCIÓN SONAR: Validación robusta que evita el chequeo "siempre falso"
+  // Comprobamos si es un string vacío o si el resultado del parseo es NaN
   const isFormInvalid = Object.values(tariffs).some(val => 
-    val === "" || val === null || Number.isNaN(val)
+    val == "" || val == null || val == undefined || Number.isNaN(val)
   );
 
   if (!initialized || loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
@@ -101,7 +102,8 @@ function TariffManager() {
                   value={tariffs[field.name]}
                   onChange={handleChange}
                   required
-                  error={tariffs[field.name] === ""}
+                  // Coherencia visual con la lógica de validación
+                  error={tariffs[field.name] === "" || Number.isNaN(tariffs[field.name])}
                   helperText={tariffs[field.name] === "" ? "Ingrese valor" : ""}
                   sx={{
                     "& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button": { display: "none" },

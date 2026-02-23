@@ -2,5 +2,5 @@ projectKey=toolrent-frontend
 serverUrl=http://localhost:9000
 serverVersion=26.2.0.119303
 dashboardUrl=http://localhost:9000/dashboard?id=toolrent-frontend
-ceTaskId=367eb20c-5d45-40dd-b981-d80d1dc6b2c4
-ceTaskUrl=http://localhost:9000/api/ce/task?id=367eb20c-5d45-40dd-b981-d80d1dc6b2c4
+ceTaskId=b240ee81-9579-4d45-8bc1-d36f27c51835
+ceTaskUrl=http://localhost:9000/api/ce/task?id=b240ee81-9579-4d45-8bc1-d36f27c51835

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import PropTypes from 'prop-types'; // IMPORTACIÓN PARA VALIDACIÓN
+import PropTypes from 'prop-types'; 
 import ClientService from "../services/client.service";
 import LoanService from "../services/loan.service";
 import { useKeycloak } from "@react-keycloak/web";
@@ -164,12 +164,19 @@ function ClientList() {
     }
   };
 
-  // CORRECCIÓN SONAR: Aplanamiento de lógica de diálogos
   const statusDialogText = confirmStatus.status === 'ACTIVE' 
     ? `¿Está seguro de restringir a ${confirmStatus.name}? No podrá realizar nuevos préstamos hasta ser reactivado.`
     : `Se verificará si ${confirmStatus.name} posee deudas pendientes antes de reactivarlo. ¿Continuar?`;
 
   const statusButtonLabel = confirmStatus.status === 'ACTIVE' ? "Confirmar Restricción" : "Confirmar Reactivación";
+
+  // CORRECCIÓN SONAR: Aplanamiento de la lógica de ordenación para evitar ternarios anidados
+  const sortedClients = filteredClients.slice().sort((a, b) => {
+    if (a.status !== b.status) {
+      return a.status === 'ACTIVE' ? -1 : 1;
+    }
+    return a.id - b.id;
+  });
 
   return (
     <Box sx={{ p: 4 }}>
@@ -234,7 +241,7 @@ function ClientList() {
           <TableBody>
             {loading ? (
               <TableRow><TableCell colSpan={7} align="center" sx={{ py: 8 }}><CircularProgress /><Typography sx={{ mt: 2 }}>Cargando base de datos...</Typography></TableCell></TableRow>
-            ) : filteredClients.length === 0 ? (
+            ) : sortedClients.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                   <Alert severity="info" variant="outlined" sx={{ justifyContent: 'center' }}>
@@ -243,16 +250,7 @@ function ClientList() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredClients
-                .slice()
-                .sort((a, b) => {
-                  // CORRECCIÓN SONAR: Aplanamiento de la lógica de ordenación
-                  if (a.status !== b.status) {
-                    return a.status === 'ACTIVE' ? -1 : 1;
-                  }
-                  return a.id - b.id;
-                })
-                .map(client => (
+              sortedClients.map(client => (
                   <React.Fragment key={client.id}>
                     <TableRow hover>
                       <TableCell align="center">{client.id}</TableCell>
