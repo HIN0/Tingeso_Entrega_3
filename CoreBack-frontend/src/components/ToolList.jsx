@@ -133,8 +133,8 @@ return (
             <TableCell sx={{ fontWeight: 'bold' }}>Categoría</TableCell>
             <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
             <TableCell align="center" sx={{ fontWeight: 'bold' }}>Stock Total</TableCell>
-            <TableCell align="center" sx={{ fontWeight: 'bold' }}>En Taller</TableCell>
-            <TableCell align="center" sx={{ fontWeight: 'bold' }}>Valor Rep.</TableCell>
+            <TableCell align="center" sx={{ fontWeight: 'bold' }}>En Reparación</TableCell>
+            <TableCell align="center" sx={{ fontWeight: 'bold' }}>Valor Reposición</TableCell>
             {isAdmin && <TableCell align="center" sx={{ fontWeight: 'bold' }}>Operaciones</TableCell>}
             </TableRow>
         </TableHead>
