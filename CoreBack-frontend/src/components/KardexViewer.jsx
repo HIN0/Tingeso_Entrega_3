@@ -1,23 +1,61 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import KardexService from "../services/kardex.service";
+import ToolService from "../services/tool.service";
+import { 
+  Box, Typography, Paper, Grid, TextField, Button, Table, TableBody, 
+  TableCell, TableContainer, TableHead, TableRow, Radio, RadioGroup, 
+  FormControlLabel, FormControl, CircularProgress, Alert, Chip, Autocomplete, InputAdornment, Divider
+} from '@mui/material';
+import HistoryIcon from '@mui/icons-material/History';
+import SearchIcon from '@mui/icons-material/Search';
+import ConstructionIcon from '@mui/icons-material/Construction';
 
 function KardexViewer() {
-  const [queryType, setQueryType] = useState("tool"); // 'tool' o 'date'
-  const [toolId, setToolId] = useState("");
+  const [queryType, setQueryType] = useState("tool");
+  const [selectedTool, setSelectedTool] = useState(null);
+  const [tools, setTools] = useState([]);
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [kardexData, setKardexData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [toolsLoading, setToolsLoading] = useState(false);
+  const [message, setMessage] = useState({ text: "", severity: "info" });
 
+  // 1. Cargar herramientas para el buscador (Heurística #7)
+  useEffect(() => {
+    setToolsLoading(true);
+    ToolService.getAll()
+      .then(res => {
+        setTools(res.data);
+        setToolsLoading(false);
+      })
+      .catch(() => {
+        showMsg("Error al sincronizar herramientas desde la base de datos.", "error");
+        setToolsLoading(false);
+      });
+  }, []);
+
+  const showMsg = (text, severity = "info") => setMessage({ text, severity });
+
+  // 2. Lógica de consulta al servicio
   const handleFetchKardex = () => {
-    setMessage("");
+    showMsg("");
     setKardexData([]); 
     setLoading(true);
 
     let promise;
     if (queryType === "tool") {
-      promise = KardexService.getByToolId(toolId);
+      if (!selectedTool) {
+        showMsg("Debe seleccionar una herramienta de la lista sugerida.", "warning");
+        setLoading(false);
+        return;
+      }
+      promise = KardexService.getByToolId(selectedTool.id);
     } else { 
+      if (!dateRange.start || !dateRange.end) {
+        showMsg("Debe ingresar ambas fechas para realizar la consulta.", "warning");
+        setLoading(false);
+        return;
+      }
       promise = KardexService.getByDateRange(dateRange.start, dateRange.end);
     }
 
@@ -25,128 +63,160 @@ function KardexViewer() {
       .then(response => {
         setKardexData(response.data);
         if (response.data.length === 0) {
-          setMessage("No movements found for the specified criteria.");
+          showMsg("No se encontraron movimientos registrados para este criterio.", "info");
         }
       })
       .catch(error => {
-        console.error("Error fetching kardex:", error);
-        setMessage(`Error: ${error.message || "Could not fetch kardex data."}`);
+        showMsg(`Error: ${error.response?.data || "No se pudo conectar con el servidor."}`, "error");
       })
-      .finally(() => {
-        setLoading(false);
-      });
+      .finally(() => setLoading(false));
   };
 
-  // Formatear fecha/hora para mostrarla
+  // 3. Estética de movimientos (Heurística #1)
+  const getMovementChip = (type) => {
+    const config = {
+      'INCOME':           { color: 'success', label: 'INCOME' },
+      'LOAN':             { color: 'error',   label: 'LOAN' },
+      'RETURN':           { color: 'success', label: 'RETURN' },
+      'REPAIR':           { color: 'warning', label: 'REPAIR' },
+      'DECOMMISSION':     { color: 'error',   label: 'DECOMMISSION' },
+      'MANUAL_DECREASE':  { color: 'primary', label: 'MANUAL_DECREASE' }
+
+    };
+    const { color, label } = config[type] || { color: 'default', label: type };
+    return <Chip label={label} color={color} size="small" variant="outlined" sx={{ fontWeight: 'bold' }} />;
+  };
+
   const formatDateTime = (dateTimeString) => {
-      if (!dateTimeString) return '-';
-      try {
-          const date = new Date(dateTimeString);
-          return date.toLocaleString(); // Formato local (ej. 21/10/2025, 10:30:00)
-      } catch (e) {
-          return dateTimeString; // Devolver original si hay error
-      }
+    if (!dateTimeString) return '-';
+    return new Date(dateTimeString).toLocaleString();
   };
-
 
   return (
-    <div style={{ padding: 16 }}>
-      <h2>Kardex Viewer</h2>
-      {/* Selector de tipo de consulta */}
-      <div>
-        <label>
-          <input
-            type="radio"
-            name="queryType"
-            value="tool"
-            checked={queryType === "tool"}
-            onChange={() => setQueryType("tool")}
-          />
-          Query by Tool ID
-        </label>
-        <label style={{ marginLeft: '15px' }}>
-          <input
-            type="radio"
-            name="queryType"
-            value="date"
-            checked={queryType === "date"}
-            onChange={() => setQueryType("date")}
-          />
-          Query by Date Range
-        </label>
-      </div>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
+      <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <HistoryIcon fontSize="large" color="primary" /> Visor de Kardex
+      </Typography>
 
-      {/* Inputs condicionales */}
-      <div style={{ margin: '15px 0' }}>
-        {queryType === "tool" && (
-          <div>
-            <label>Tool ID: </label>
-            <input
-              type="number"
-              value={toolId}
-              onChange={(e) => setToolId(e.target.value)}
-              placeholder="Enter Tool ID"
-            />
-          </div>
-        )}
-        {queryType === "date" && (
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <label>Start Date:</label>
-            <input
-              type="date"
-              value={dateRange.start}
-              onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-            />
-            <label>End Date:</label>
-            <input
-              type="date"
-              value={dateRange.end}
-              onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-            />
-          </div>
-        )}
-      </div>
+      <Paper elevation={3} sx={{ p: 4, mb: 4, borderRadius: 2 }}>
+        <Grid container direction="column" spacing={4}>
+          
+          {/* SECCIÓN 1: SELECTORES DE TIPO */}
+          <Grid item xs={12}>
+            <FormControl component="fieldset">
+              <RadioGroup row value={queryType} onChange={(e) => setQueryType(e.target.value)}>
+                <FormControlLabel value="tool" control={<Radio />} label="Consultar por Herramienta" />
+                <FormControlLabel value="date" control={<Radio />} label="Consultar por Rango de Fechas" />
+              </RadioGroup>
+            </FormControl>
+          </Grid>
 
-      {/* Botón de búsqueda */}
-      <button onClick={handleFetchKardex} disabled={loading}>
-        {loading ? "Loading..." : "Fetch Kardex Movements"}
-      </button>
+          <Divider sx={{ mx: 2 }} />
 
-      {/* Mensajes y Tabla de Resultados */}
-      {message && <p style={{ color: message.startsWith("Error") ? 'red' : 'green', marginTop: '15px' }}>{message}</p>}
+          {/* SECCIÓN 2: CELDA DE BÚSQUEDA ANCHA (REPARADO) */}
+          <Grid item xs={12}>
+            <Box sx={{ width: '100%' }}>
+              {queryType === "tool" ? (
+                <Autocomplete
+                  fullWidth
+                  options={tools}
+                  loading={toolsLoading}
+                  getOptionLabel={(option) => `[ID: ${option.id}] - ${option.name}`}
+                  onChange={(e, val) => setSelectedTool(val)}
+                  sx={{ width: '100%' }} // Fuerza expansión total
+                  renderInput={(params) => (
+                    <TextField 
+                      {...params} 
+                      fullWidth
+                      label="Seleccione Herramienta para ver Historial" 
+                      placeholder="Escriba el nombre o ID de la herramienta..."
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: (
+                          <>
+                            <InputAdornment position="start">
+                              <ConstructionIcon color="primary" />
+                            </InputAdornment>
+                            {params.InputProps.startAdornment}
+                          </>
+                        ),
+                      }}
+                    />
+                  )}
+                />
+              ) : (
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth label="Fecha Desde" type="date"
+                      value={dateRange.start} onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth label="Fecha Hasta" type="date"
+                      value={dateRange.end} onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+                </Grid>
+              )}
+            </Box>
+          </Grid>
+
+          {/* SECCIÓN 3: BOTÓN DE ACCIÓN CENTRADO */}
+          <Grid item xs={12}>
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Button
+                variant="contained" 
+                onClick={handleFetchKardex} 
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SearchIcon />}
+                sx={{ px: 10, py: 2, fontWeight: 'bold', minWidth: '300px' }}
+              >
+                {loading ? "BUSCANDO..." : "CONSULTAR MOVIMIENTOS"}
+              </Button>
+            </Box>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* ÁREA DE MENSAJES Y RESULTADOS */}
+      {message.text && (
+        <Alert severity={message.severity} sx={{ mb: 3 }} variant="filled">{message.text}</Alert>
+      )}
 
       {kardexData.length > 0 && (
-        <div style={{ marginTop: '20px' }}>
-          <h3>Kardex Movements</h3>
-          <table border="1" style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Date/Time</th>
-                <th>Tool ID</th>
-                <th>Tool Name</th>
-                <th>Movement Type</th>
-                <th>Quantity</th>
-                <th>User</th>
-              </tr>
-            </thead>
-            <tbody>
-              {kardexData.map(movement => (
-                <tr key={movement.id}>
-                  <td>{movement.id}</td>
-                  <td>{formatDateTime(movement.movementDate)}</td>
-                  <td>{movement.tool?.id}</td>
-                  <td>{movement.tool?.name}</td>
-                  <td>{movement.type}</td>
-                  <td>{movement.quantity}</td>
-                  <td>{movement.user?.username}</td>
-                </tr>
+        <TableContainer component={Paper} elevation={3} sx={{ borderRadius: 2 }}>
+          <Table stickyHeader>
+            <TableHead sx={{ backgroundColor: '#1976d2' }}>
+              <TableRow>
+                <TableCell sx={{ color: 'black', fontWeight: 'bold' }}>Fecha / Hora</TableCell>
+                <TableCell sx={{ color: 'black', fontWeight: 'bold' }}>Herramienta</TableCell>
+                <TableCell align="center" sx={{ color: 'black', fontWeight: 'bold' }}>Tipo de Movimiento</TableCell>
+                <TableCell align="center" sx={{ color: 'black', fontWeight: 'bold' }}>Cantidad</TableCell>
+                <TableCell sx={{ color: 'black', fontWeight: 'bold' }}>Operador Responsable</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {kardexData.map((mov) => (
+                <TableRow key={mov.id} hover>
+                  <TableCell>{formatDateTime(mov.movementDate)}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{mov.tool?.name}</Typography>
+                    <Typography variant="caption" color="textSecondary">ID Herramienta: {mov.tool?.id}</Typography>
+                  </TableCell>
+                  <TableCell align="center">{getMovementChip(mov.type)}</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold' }}>{mov.quantity}</TableCell>
+                  <TableCell align="center">{mov.user?.username || 'Sistema Automático'}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
-    </div>
+    </Box>
   );
 }
 

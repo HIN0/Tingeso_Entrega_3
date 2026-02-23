@@ -3,7 +3,8 @@ import ToolService from '../services/tool.service';
 import { 
 Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
 Paper, Typography, Button, Chip, Box, IconButton, Tooltip, 
-TextField, InputAdornment, Snackbar, Alert, Divider 
+TextField, Snackbar, Alert, Divider, Dialog, DialogActions, 
+DialogContent, DialogContentText, DialogTitle, Zoom
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
@@ -21,6 +22,10 @@ const [decommissionedTools, setDecommissionedTools] = useState([]);
 const [error, setError] = useState({ open: false, text: '', severity: 'error' });
 const [adjustment, setAdjustment] = useState({ id: null, quantity: 1, type: null });
 
+// ESTADO PARA EL DIÁLOGO DE CONFIRMACIÓN (Heurística #5)
+const [confirmOpen, setConfirmOpen] = useState(false);
+const [toolToDecommission, setToolToDecommission] = useState(null);
+
 const navigate = useNavigate();
 const { keycloak, initialized } = useKeycloak();
 const isAdmin = initialized && keycloak?.authenticated && keycloak.hasRealmRole("ADMIN");
@@ -29,7 +34,6 @@ const loadTools = () => {
     ToolService.getAll()
     .then(response => {
         const allTools = response.data;
-        // Clasificación según tu lógica original
         setDecommissionedTools(allTools.filter(t => t.status === 'DECOMMISSIONED'));
         setActiveTools(allTools.filter(t => t.status !== 'DECOMMISSIONED'));
     })
@@ -45,22 +49,28 @@ useEffect(() => {
     }
 }, [initialized, keycloak.authenticated]);
 
-// REPARACIÓN: Función Decommission (Dar de baja)
-const handleDecommission = (id, name) => {
-    if (window.confirm(`¿Seguro que desea dar de baja "${name}"? Esta acción no se puede deshacer.`)) {
-    ToolService.decommission(id)
-        .then(() => {
-        setError({ open: true, text: 'Herramienta dada de baja con éxito', severity: 'success' });
-        loadTools();
-        })
-        .catch(e => {
-        const msg = e.response?.data?.message || "No se pudo dar de baja";
-        setError({ open: true, text: `Error: ${msg}`, severity: 'error' });
-        });
-    }
+// Apertura del diálogo amigable
+const openDecommissionDialog = (tool) => {
+    setToolToDecommission(tool);
+    setConfirmOpen(true);
 };
 
-// Lógica de Ajuste de Stock integrada
+const handleDecommissionConfirm = () => {
+    if (!toolToDecommission) return;
+    
+    ToolService.decommission(toolToDecommission.id)
+    .then(() => {
+        setError({ open: true, text: `"${toolToDecommission.name}" dada de baja con éxito`, severity: 'success' });
+        setConfirmOpen(false);
+        loadTools();
+    })
+    .catch(e => {
+        const msg = e.response?.data?.message || "No se pudo dar de baja";
+        setError({ open: true, text: `Error: ${msg}`, severity: 'error' });
+        setConfirmOpen(false);
+    });
+};
+
 const applyStockAdjustment = () => {
     const quantityChange = adjustment.type === 'INCREASE' ? adjustment.quantity : -adjustment.quantity;
     ToolService.adjustStock(adjustment.id, { quantityChange })
@@ -75,101 +85,112 @@ const applyStockAdjustment = () => {
 
 const getStatusChip = (status) => {
     const colors = { 'AVAILABLE': 'success', 'REPAIRING': 'warning', 'LOANED': 'primary' };
-    return <Chip label={status} color={colors[status] || 'default'} size="small" variant="outlined" />;
+    return <Chip label={status} color={colors[status] || 'default'} size="small" variant="filled" sx={{ fontWeight: 'bold' }} />;
 };
 
 return (
-    <Box sx={{ p: 2 }}>
-    <Snackbar open={error.open} autoHideDuration={4000} onClose={() => setError({ ...error, open: false })}>
-        <Alert severity={error.severity}>{error.text}</Alert>
+    <Box sx={{ p: 4 }}>
+    <Snackbar open={error.open} autoHideDuration={4000} onClose={() => setError({ ...error, open: false })} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert severity={error.severity} variant="filled" sx={{ width: '100%' }}>{error.text}</Alert>
     </Snackbar>
 
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>Inventario de Herramientas</Typography>
+    {/* DIÁLOGO PROFESIONAL (Heurística #5) */}
+    <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} TransitionComponent={Zoom}>
+        <DialogTitle sx={{ fontWeight: 'bold', color: '#d32f2f' }}>¿Confirmar baja de herramienta?</DialogTitle>
+        <DialogContent>
+        <DialogContentText>
+            Esta acción marcará <strong>{toolToDecommission?.name}</strong> como fuera de servicio permanentemente. Esta acción no se puede deshacer.
+        </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+        <Button onClick={() => setConfirmOpen(false)} variant="outlined">Cancelar</Button>
+        <Button onClick={handleDecommissionConfirm} color="error" variant="contained" autoFocus>Dar de Baja</Button>
+        </DialogActions>
+    </Dialog>
+
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
+        <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1a237e' }}>Inventario de Herramientas</Typography>
         {isAdmin && (
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/tools/add')}>
+        <Button variant="contained" size="large" startIcon={<AddIcon />} onClick={() => navigate('/tools/add')} sx={{ borderRadius: 2, px: 4 }}>
             Nueva Herramienta
         </Button>
         )}
     </Box>
 
-    {/* TABLA 1: ACTIVAS Y EN REPARACIÓN */}
-    <Typography variant="h6" sx={{ color: '#2e7d32', mb: 1, fontWeight: 'bold' }}>
+    <Typography variant="h6" sx={{ color: '#2e7d32', mb: 2, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ width: 10, height: 10, bgcolor: '#2e7d32', borderRadius: '50%' }} />
         HERRAMIENTAS ACTIVAS ({activeTools.length})
     </Typography>
-    <TableContainer component={Paper} sx={{ mb: 6, elevation: 3 }}>
-        <Table>
-        <TableHead sx={{ bgcolor: '#edf7ed' }}>
+
+    <TableContainer component={Paper} elevation={4} sx={{ borderRadius: 3, overflow: 'hidden' }}>
+        <Table sx={{ minWidth: 800 }}>
+        <TableHead sx={{ bgcolor: '#f1f8e9' }}>
             <TableRow>
-            <TableCell>ID</TableCell>
-            <TableCell>Nombre</TableCell>
-            <TableCell>Categoría</TableCell>
-            <TableCell>Estado</TableCell>
-            <TableCell align="center">Stock</TableCell>
-            <TableCell align="center">En Reparación</TableCell>
-            <TableCell align="center">Valor Rep.</TableCell>
-            {isAdmin && <TableCell align="center">Acciones</TableCell>}
+            <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Categoría</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
+            <TableCell align="center" sx={{ fontWeight: 'bold' }}>Stock Total</TableCell>
+            <TableCell align="center" sx={{ fontWeight: 'bold' }}>En Reparacion</TableCell>
+            <TableCell align="center" sx={{ fontWeight: 'bold' }}>Valor Reposición</TableCell>
+            {isAdmin && <TableCell align="center" sx={{ fontWeight: 'bold' }}>Operaciones</TableCell>}
             </TableRow>
         </TableHead>
         <TableBody>
             {activeTools
-                .slice() // Crea una copia para no mutar el estado original
-                .sort((a, b) => {
-                    // Definimos el orden de prioridad de los estados
-                    const statusPriority = { 'AVAILABLE': 1, 'REPAIRING': 2 };
-                    const priorityA = statusPriority[a.status] || 99;
-                    const priorityB = statusPriority[b.status] || 99;
-
-                    // 1. Ordenar por prioridad de Estado
-                    if (priorityA !== priorityB) {
-                    return priorityA - priorityB;
-                    }
-                    // 2. Si el estado es el mismo, ordenar por ID (Ascendente)
-                    return a.id - b.id;
-                })
+            .slice()
+            .sort((a, b) => {
+                const statusPriority = { 'AVAILABLE': 1, 'REPAIRING': 2 };
+                const priorityA = statusPriority[a.status] || 99;
+                const priorityB = statusPriority[b.status] || 99;
+                return priorityA !== priorityB ? priorityA - priorityB : a.id - b.id;
+            })
             .map(tool => (
             <TableRow key={tool.id} hover>
                 <TableCell>{tool.id}</TableCell>
                 <TableCell sx={{ fontWeight: 'medium' }}>{tool.name}</TableCell>
-                <TableCell>{tool.category}</TableCell>
+                <TableCell><Chip label={tool.category} size="small" variant="outlined" /></TableCell>
                 <TableCell>{getStatusChip(tool.status)}</TableCell>
-                <TableCell align="center">{tool.stock}</TableCell>
+                <TableCell align="center" sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{tool.stock}</TableCell>
                 <TableCell align="center">{tool.inRepair}</TableCell>
                 <TableCell align="center">${tool.replacementValue}</TableCell>
                 {isAdmin && (
                 <TableCell align="center">
-                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <Tooltip title="Editar"><IconButton size="small" color="primary" onClick={() => navigate(`/tools/edit/${tool.id}`)}><EditIcon /></IconButton></Tooltip>
+                <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', alignItems: 'center' }}>
+                    <Tooltip title="Editar"><IconButton size="small" color="primary" sx={{ bgcolor: '#e3f2fd' }} onClick={() => navigate(`/tools/edit/${tool.id}`)}><EditIcon /></IconButton></Tooltip>
                     
                     {adjustment.id === tool.id ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#f5f5f5', p: 0.5, borderRadius: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: '#fff', border: '2px solid #2e7d32', p: 0.8, borderRadius: 2, boxShadow: 2 }}>
                         <TextField
-                            type="number" size="small" value={adjustment.quantity}
-                            onChange={(e) => setAdjustment({...adjustment, quantity: parseInt(e.target.value) || 1})}
-                            sx={{ width: 60 }} inputProps={{ min: 1 }}
+                        type="number" size="small" autoFocus
+                        value={adjustment.quantity}
+                        onChange={(e) => setAdjustment({...adjustment, quantity: parseInt(e.target.value) || 1})}
+                        sx={{ width: 80 }} 
+                        inputProps={{ min: 1, style: { textAlign: 'center', fontWeight: 'bold' } }}
                         />
                         <IconButton color="success" onClick={applyStockAdjustment}><CheckIcon /></IconButton>
-                        <IconButton onClick={() => setAdjustment({ id: null, quantity: 1, type: null })}><CloseIcon /></IconButton>
-                        </Box>
+                        <IconButton color="error" onClick={() => setAdjustment({ id: null, quantity: 1, type: null })}><CloseIcon /></IconButton>
+                    </Box>
                     ) : (
-                        <>
-                        <Tooltip title="Aumentar Stock"><IconButton color="success" onClick={() => setAdjustment({ id: tool.id, quantity: 1, type: 'INCREASE' })}><AddCircleIcon /></IconButton></Tooltip>
-                        <Tooltip title="Disminuir Stock"><IconButton color="warning" onClick={() => setAdjustment({ id: tool.id, quantity: 1, type: 'DECREASE' })}><RemoveCircleIcon /></IconButton></Tooltip>
-                        </>
+                    <>
+                        <Tooltip title="Añadir Stock"><IconButton color="success" sx={{ bgcolor: '#e8f5e9' }} onClick={() => setAdjustment({ id: tool.id, quantity: 1, type: 'INCREASE' })}><AddCircleIcon /></IconButton></Tooltip>
+                        <Tooltip title="Retirar Stock"><IconButton color="warning" sx={{ bgcolor: '#fff3e0' }} onClick={() => setAdjustment({ id: tool.id, quantity: 1, type: 'DECREASE' })}><RemoveCircleIcon /></IconButton></Tooltip>
+                    </>
                     )}
 
-                    <Tooltip title="Dar de Baja">
-                        <span>
+                    <Tooltip title="Eliminar/Baja">
+                    <span>
                         <IconButton 
-                            color="error" 
-                            disabled={tool.status === 'LOANED' || tool.status === 'REPAIRING'}
-                            onClick={() => handleDecommission(tool.id, tool.name)}
+                        color="error" 
+                        sx={{ bgcolor: '#ffebee' }}
+                        disabled={tool.status === 'LOANED' || tool.status === 'REPAIRING'}
+                        onClick={() => openDecommissionDialog(tool)}
                         >
-                            <DeleteForeverIcon />
+                        <DeleteForeverIcon />
                         </IconButton>
-                        </span>
+                    </span>
                     </Tooltip>
-                    </Box>
+                </Box>
                 </TableCell>
                 )}
             </TableRow>
@@ -178,29 +199,29 @@ return (
         </Table>
     </TableContainer>
 
-    <Divider sx={{ my: 4 }} />
+    <Divider sx={{ my: 6 }} />
 
-    {/* TABLA 2: DADAS DE BAJA */}
-    <Typography variant="h6" sx={{ color: '#d32f2f', mb: 1, fontWeight: 'bold' }}>
-        HERRAMIENTAS DADAS DE BAJA ({decommissionedTools.length})
+    <Typography variant="h6" sx={{ color: '#d32f2f', mb: 2, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ width: 10, height: 10, bgcolor: '#d32f2f', borderRadius: '50%' }} />
+        HISTORIAL DE BAJAS ({decommissionedTools.length})
     </Typography>
-    <TableContainer component={Paper}>
+    <TableContainer component={Paper} elevation={2} sx={{ borderRadius: 3 }}>
         <Table>
-        <TableHead sx={{ bgcolor: '#fdeded' }}>
+        <TableHead sx={{ bgcolor: '#fafafa' }}>
             <TableRow>
-            <TableCell>ID</TableCell>
-            <TableCell>Nombre</TableCell>
-            <TableCell>Categoría</TableCell>
-            <TableCell align="center">Valor de Reposición</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>ID</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Nombre de Herramienta</TableCell>
+            <TableCell sx={{ fontWeight: 'bold' }}>Categoría</TableCell>
+            <TableCell align="center" sx={{ fontWeight: 'bold' }}>Costo de Reposición</TableCell>
             </TableRow>
         </TableHead>
         <TableBody>
             {decommissionedTools.map(tool => (
-            <TableRow key={tool.id}>
+            <TableRow key={tool.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                 <TableCell>{tool.id}</TableCell>
-                <TableCell>{tool.name}</TableCell>
+                <TableCell color="textSecondary">{tool.name}</TableCell>
                 <TableCell>{tool.category}</TableCell>
-                <TableCell align="center">${tool.replacementValue}</TableCell>
+                <TableCell align="center" sx={{ color: '#d32f2f', fontWeight: 'bold' }}>${tool.replacementValue}</TableCell>
             </TableRow>
             ))}
         </TableBody>
