@@ -20,10 +20,7 @@ const ToolList = () => {
 const [activeTools, setActiveTools] = useState([]);
 const [decommissionedTools, setDecommissionedTools] = useState([]);
 const [error, setError] = useState({ open: false, text: '', severity: 'error' });
-
-// Ajuste de stock: quantity inicia vacío para cumplir con tu requerimiento
 const [adjustment, setAdjustment] = useState({ id: null, quantity: "", type: null });
-
 const [confirmOpen, setConfirmOpen] = useState(false);
 const [toolToDecommission, setToolToDecommission] = useState(null);
 
@@ -72,25 +69,20 @@ const handleDecommissionConfirm = () => {
 };
 
 const applyStockAdjustment = () => {
-    // Validación de seguridad: No procesar si está vacío o no es un número positivo
-    if (adjustment.quantity === "" || parseInt(adjustment.quantity) <= 0) return;
+    // CORRECCIÓN SONAR: Uso de Number.parseInt y base decimal
+    const parsedQty = Number.parseInt(adjustment.quantity, 10);
+    if (adjustment.quantity === "" || parsedQty <= 0) return;
 
-    const quantityChange = adjustment.type === 'INCREASE' ? parseInt(adjustment.quantity) : -parseInt(adjustment.quantity);
+    const quantityChange = adjustment.type === 'INCREASE' ? parsedQty : -parsedQty;
     
     ToolService.adjustStock(adjustment.id, { quantityChange })
     .then(() => {
-        // NOTIFICACIÓN DE ÉXITO (Justo lo que faltaba)
         const accion = adjustment.type === 'INCREASE' ? 'aumentado' : 'disminuido';
-        setError({ 
-            open: true, 
-            text: `Stock ${accion} exitosamente`, 
-            severity: 'success' 
-        });
-
+        setError({ open: true, text: `Stock ${accion} exitosamente`, severity: 'success' });
         setAdjustment({ id: null, quantity: "", type: null });
         loadTools();
     })
-    .catch(e => {
+    .catch(() => {
         setError({ open: true, text: 'Error al ajustar stock', severity: 'error' });
     });
 };
@@ -99,6 +91,10 @@ const getStatusChip = (status) => {
     const colors = { 'AVAILABLE': 'success', 'REPAIRING': 'warning', 'LOANED': 'primary' };
     return <Chip label={status} color={colors[status] || 'default'} size="small" variant="filled" sx={{ fontWeight: 'bold' }} />;
 };
+
+// CORRECCIÓN SONAR: Lógica de colores extraída para evitar ternarios anidados
+const getAdjustmentColor = () => adjustment.type === 'INCREASE' ? '#2e7d32' : '#ed6c02';
+const getAdjustmentLabel = () => adjustment.type === 'INCREASE' ? 'Aumentando stock' : 'Disminuyendo stock';
 
 return (
     <Box sx={{ p: 4 }}>
@@ -121,11 +117,11 @@ return (
 
     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, alignItems: 'center' }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1a237e' }}>Inventario de Herramientas</Typography>
-        {isAdmin || isUser ? (
+        {(isAdmin || isUser) && (
         <Button variant="contained" size="large" startIcon={<AddIcon />} onClick={() => navigate('/tools/add')} sx={{ borderRadius: 2, px: 4 }}>
             Nueva Herramienta
         </Button>
-        ) : null}
+        )}
     </Box>
 
     <Typography variant="h6" sx={{ color: '#2e7d32', mb: 2, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -151,13 +147,15 @@ return (
             {activeTools
             .slice()
             .sort((a, b) => {
+                // CORRECCIÓN SONAR: Lógica de ordenación aplanada
                 const statusPriority = { 'AVAILABLE': 1, 'REPAIRING': 2 };
                 const priorityA = statusPriority[a.status] || 99;
                 const priorityB = statusPriority[b.status] || 99;
-                return priorityA !== priorityB ? priorityA - priorityB : a.id - b.id;
+                if (priorityA !== priorityB) return priorityA - priorityB;
+                return a.id - b.id;
             })
             .map(tool => (
-            <TableRow key={tool.id} hover>
+                <TableRow key={tool.id} hover>
                 <TableCell>{tool.id}</TableCell>
                 <TableCell sx={{ fontWeight: 'medium' }}>{tool.name}</TableCell>
                 <TableCell align="center"><Chip label={tool.category} size="small" variant="outlined" /></TableCell>
@@ -166,76 +164,66 @@ return (
                 <TableCell align="center">{tool.inRepair}</TableCell>
                 <TableCell align="center">${tool.replacementValue}</TableCell>
                 {isAdmin && (
-                <TableCell align="center">
-                <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', alignItems: 'center' }}>
-                    
-                    <Tooltip title="Editar"><IconButton size="small" color="primary" sx={{ bgcolor: '#e3f2fd' }} onClick={() => navigate(`/tools/edit/${tool.id}`)}><EditIcon /></IconButton></Tooltip>
-                    
-                    {adjustment.id === tool.id ? (
-                    <Zoom in={true}>
-                        <Box sx={{ 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        alignItems: 'center', 
-                        bgcolor: '#fff', 
-                        border: `2px solid ${adjustment.type === 'INCREASE' ? '#2e7d32' : '#ed6c02'}`, 
-                        p: 1.5, 
-                        borderRadius: 2, 
-                        boxShadow: 3,
-                        minWidth: 160 
-                        }}>
-                        <Typography variant="caption" sx={{ fontWeight: 'bold', mb: 1, textTransform: 'uppercase', color: adjustment.type === 'INCREASE' ? '#2e7d32' : '#ed6c02' }}>
-                            {adjustment.type === 'INCREASE' ? 'Aumentando stock' : 'Disminuyendo stock'}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <TextField
-                            type="number" size="small" autoFocus
-                            value={adjustment.quantity}
-                            onChange={(e) => setAdjustment({...adjustment, quantity: e.target.value})}
-                            sx={{ 
-                                width: 100,
-                                "& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button": { display: "none" },
-                                "& input[type=number]": { MozAppearance: "textfield" }
-                            }} 
-                            inputProps={{ style: { textAlign: 'center', fontWeight: 'bold' } }}
-                            />
-                            {/* Heurística #5: Botón deshabilitado si no hay valor válido */}
-                            <IconButton 
-                            color="success" 
-                            onClick={applyStockAdjustment}
-                            disabled={adjustment.quantity === "" || parseInt(adjustment.quantity) <= 0}
-                            >
-                            <CheckIcon />
-                            </IconButton>
-                            <IconButton color="error" onClick={() => setAdjustment({ id: null, quantity: "", type: null })}>
-                            <CloseIcon />
-                            </IconButton>
-                        </Box>
-                        </Box>
-                    </Zoom>
-                    ) : (
-                    <>
-                        <Tooltip title="Añadir Stock"><IconButton color="success" sx={{ bgcolor: '#e8f5e9' }} onClick={() => setAdjustment({ id: tool.id, quantity: "", type: 'INCREASE' })}><AddCircleIcon /></IconButton></Tooltip>
-                        <Tooltip title="Retirar Stock"><IconButton color="warning" sx={{ bgcolor: '#fff3e0' }} onClick={() => setAdjustment({ id: tool.id, quantity: "", type: 'DECREASE' })}><RemoveCircleIcon /></IconButton></Tooltip>
-                    </>
-                    )}
+                    <TableCell align="center">
+                    <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', alignItems: 'center' }}>
+                        <Tooltip title="Editar"><IconButton size="small" color="primary" sx={{ bgcolor: '#e3f2fd' }} onClick={() => navigate(`/tools/edit/${tool.id}`)}><EditIcon /></IconButton></Tooltip>
+                        
+                        {adjustment.id === tool.id ? (
+                        <Zoom in={true}>
+                            <Box sx={{ 
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', bgcolor: '#fff', 
+                            border: `2px solid ${getAdjustmentColor()}`, p: 1.5, borderRadius: 2, boxShadow: 3, minWidth: 160 
+                            }}>
+                            <Typography variant="caption" sx={{ fontWeight: 'bold', mb: 1, textTransform: 'uppercase', color: getAdjustmentColor() }}>
+                                {getAdjustmentLabel()}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <TextField
+                                type="number" size="small" autoFocus
+                                value={adjustment.quantity}
+                                onChange={(e) => setAdjustment({...adjustment, quantity: e.target.value})}
+                                sx={{ 
+                                    width: 100,
+                                    "& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button": { display: "none" },
+                                    "& input[type=number]": { MozAppearance: "textfield" }
+                                }} 
+                                inputProps={{ style: { textAlign: 'center', fontWeight: 'bold' } }}
+                                />
+                                <IconButton 
+                                color="success" 
+                                onClick={applyStockAdjustment}
+                                disabled={adjustment.quantity === "" || Number.parseInt(adjustment.quantity, 10) <= 0}
+                                >
+                                <CheckIcon />
+                                </IconButton>
+                                <IconButton color="error" onClick={() => setAdjustment({ id: null, quantity: "", type: null })}>
+                                <CloseIcon />
+                                </IconButton>
+                            </Box>
+                            </Box>
+                        </Zoom>
+                        ) : (
+                        <>
+                            <Tooltip title="Añadir Stock"><IconButton color="success" sx={{ bgcolor: '#e8f5e9' }} onClick={() => setAdjustment({ id: tool.id, quantity: "", type: 'INCREASE' })}><AddCircleIcon /></IconButton></Tooltip>
+                            <Tooltip title="Retirar Stock"><IconButton color="warning" sx={{ bgcolor: '#fff3e0' }} onClick={() => setAdjustment({ id: tool.id, quantity: "", type: 'DECREASE' })}><RemoveCircleIcon /></IconButton></Tooltip>
+                        </>
+                        )}
 
-                    <Tooltip title="Dar De Baja">
-                    <span>
-                        <IconButton 
-                        color="error" 
-                        sx={{ bgcolor: '#ffebee' }}
-                        disabled={tool.status === 'LOANED' || tool.status === 'REPAIRING'}
-                        onClick={() => openDecommissionDialog(tool)}
-                        >
-                        <DeleteForeverIcon />
-                        </IconButton>
-                    </span>
-                    </Tooltip>
-                </Box>
-                </TableCell>
+                        <Tooltip title="Dar De Baja">
+                        <span>
+                            <IconButton 
+                            color="error" sx={{ bgcolor: '#ffebee' }}
+                            disabled={tool.status === 'LOANED' || tool.status === 'REPAIRING'}
+                            onClick={() => openDecommissionDialog(tool)}
+                            >
+                            <DeleteForeverIcon />
+                            </IconButton>
+                        </span>
+                        </Tooltip>
+                    </Box>
+                    </TableCell>
                 )}
-            </TableRow>
+                </TableRow>
             ))}
         </TableBody>
         </Table>

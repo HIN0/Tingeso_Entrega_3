@@ -58,7 +58,22 @@ function EditClient() {
     return isValid ? "success" : "error";
   };
 
-  // Validación general del formulario para habilitar el botón
+  // CORRECCIÓN SONAR: Funciones para aplanar ternarios anidados
+  const getNameHelperText = () => {
+    if (client.name === "") return "Ingrese valor";
+    return validateName() ? "Nombre válido" : "Mínimo 3 caracteres";
+  };
+
+  const getPhoneHelperText = () => {
+    if (client.phone === "") return "Ingrese valor";
+    return validatePhone() ? "Teléfono válido" : "Debe empezar con 9 y tener 9 dígitos";
+  };
+
+  const getEmailHelperText = () => {
+    if (client.email === "") return "Ingrese valor";
+    return validateEmail() ? "Email válido" : "Correo inválido";
+  };
+
   const isFormInvalid = !(validateName() && validatePhone() && validateEmail());
 
   const handleSubmit = (e) => {
@@ -111,17 +126,17 @@ function EditClient() {
                 color={getFieldColor(validateName(), client.name)}
                 focused={client.name !== ""}
                 error={client.name === "" || !validateName()}
-                helperText={client.name === "" ? "Ingrese valor" : (!validateName() ? "Mínimo 3 caracteres" : "Nombre válido")}
+                helperText={getNameHelperText()}
                 sx={{ ...autofillStyles }}
                 InputProps={{ startAdornment: <InputAdornment position="start"><PersonIcon color={getFieldColor(validateName(), client.name)} /></InputAdornment> }}
               />
             </Grid>
 
-            {/* RUT (Solo lectura por requisito funcional) */}
+            {/* RUT */}
             <Grid item xs={12} md={6}>
               <TextField
-                fullWidth label="RUT (No editable)" name="rut" value={client.rut} readOnly
-                disabled // Heurística #4: Consistencia visual de campo no editable
+                fullWidth label="RUT (No editable)" name="rut" value={client.rut}
+                disabled 
                 InputProps={{ startAdornment: <InputAdornment position="start"><BadgeIcon /></InputAdornment> }}
                 sx={{ bgcolor: '#f5f5f5' }}
               />
@@ -134,7 +149,7 @@ function EditClient() {
                 color={getFieldColor(validatePhone(), client.phone)}
                 focused={client.phone !== ""}
                 error={client.phone === "" || !validatePhone()}
-                helperText={client.phone === "" ? "Ingrese valor" : (!validatePhone() ? "Debe empezar con 9 y tener 9 dígitos" : "Teléfono válido")}
+                helperText={getPhoneHelperText()}
                 sx={{ ...autofillStyles }}
                 InputProps={{ startAdornment: <InputAdornment position="start"><PhoneIcon color={getFieldColor(validatePhone(), client.phone)} /></InputAdornment> }}
               />
@@ -147,13 +162,12 @@ function EditClient() {
                 color={getFieldColor(validateEmail(), client.email)}
                 focused={client.email !== ""}
                 error={client.email === "" || !validateEmail()}
-                helperText={client.email === "" ? "Ingrese valor" : (!validateEmail() ? "Correo inválido" : "Email válido")}
+                helperText={getEmailHelperText()}
                 sx={{ ...autofillStyles }}
                 InputProps={{ startAdornment: <InputAdornment position="start"><EmailIcon color={getFieldColor(validateEmail(), client.email)} /></InputAdornment> }}
               />
             </Grid>
 
-            {/* Botones Centrados */}
             <Grid item xs={12}>
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 4 }}>
                 <Button

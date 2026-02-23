@@ -26,7 +26,7 @@ function AddTool() {
   const [tool, setTool] = useState({
     name: "",
     category: "",
-    replacementValue: "", // Iniciamos vacío para evitar el 0 antepuesto
+    replacementValue: "",
     stock: "",
     inRepair: 0 
   });
@@ -36,13 +36,19 @@ function AddTool() {
   const [notificacion, setNotificacion] = useState({ open: false, text: '', severity: 'error' });
   const navigate = useNavigate();
 
+  // CORRECCIÓN SONAR: Se eliminó el ternario anidado para mejorar legibilidad
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // Si es numérico, permitimos el string vacío para sobreescribir el 0
     const isNumericField = ['stock', 'replacementValue', 'inRepair'].includes(name);
-    const val = isNumericField ? (value === "" ? "" : parseInt(value) || 0) : value;
     
-    setTool({ ...tool, [name]: val });
+    let finalValue = value;
+
+    if (isNumericField) {
+      // CORRECCIÓN SONAR: Uso de Number.parseInt con base decimal explícita
+      finalValue = value === "" ? "" : (Number.parseInt(value, 10) || 0);
+    }
+    
+    setTool({ ...tool, [name]: finalValue });
   };
 
   const handleSubmit = (e) => {
@@ -59,17 +65,12 @@ function AddTool() {
 
     ToolService.create(tool)
       .then(() => {
-        // 1. Mostrar mensaje de éxito en pantalla
         setNotificacion({ 
           open: true, 
           text: "¡Herramienta registrada exitosamente!", 
           severity: 'success' 
         });
-
-        // 2. Esperar 2 segundos (tiempo prudente) antes de redirigir
-        setTimeout(() => {
-          navigate("/tools");
-        }, 5000); 
+        setTimeout(() => navigate("/tools"), 2000); 
       })
       .catch((err) => {
         const backendErrors = err.response?.data?.fieldErrors;

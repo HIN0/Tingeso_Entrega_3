@@ -4,10 +4,9 @@ import { useKeycloak } from "@react-keycloak/web";
 import { 
   Box, Typography, Button, Paper, Grid, Table, TableBody, TableCell, 
   TableContainer, TableHead, TableRow, TextField, Checkbox, 
-  FormControlLabel, CircularProgress, Alert, Divider, ButtonGroup 
+  FormControlLabel, CircularProgress, Alert, Divider
 } from '@mui/material';
 import AssessmentIcon from '@mui/icons-material/Assessment';
-import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import TodayIcon from '@mui/icons-material/Today';
 
 function ReportViewer() {
@@ -30,7 +29,6 @@ function ReportViewer() {
     const fromDate = filterDates && dateRange.from ? dateRange.from : null;
     const toDate = filterDates && dateRange.to ? dateRange.to : null;
 
-    // Validaciones de negocio (Heurística #5)
     if (filterDates && type !== "TOP_TOOLS" && (!fromDate || !toDate)) {
         setMessage("Error: Ambas fechas son requeridas cuando el filtro está activo.");
         setLoading(false);
@@ -81,6 +79,61 @@ function ReportViewer() {
     loadReport(type, useDateFilter);
   };
 
+  // CORRECCIÓN SONAR: Renderizado de cabecera aplanado
+  const renderTableHeader = () => {
+    if (reportType.includes("LOANS")) {
+      return (
+        <>
+          <TableCell>ID</TableCell><TableCell>Cliente</TableCell><TableCell>Herramienta</TableCell>
+          <TableCell>Inicio</TableCell><TableCell>Vencimiento</TableCell><TableCell>Estado</TableCell>
+        </>
+      );
+    }
+    if (reportType === "LATE_CLIENTS") {
+      return (
+        <>
+          <TableCell>ID</TableCell><TableCell>RUT</TableCell><TableCell>Nombre</TableCell>
+          <TableCell>Email</TableCell><TableCell>Estado</TableCell>
+        </>
+      );
+    }
+    return (
+      <>
+        <TableCell>Ranking</TableCell><TableCell>Herramienta</TableCell><TableCell>Total Préstamos</TableCell>
+      </>
+    );
+  };
+
+  // CORRECCIÓN SONAR: Renderizado de filas aplanado
+  const renderTableRow = (item, index) => {
+    if (reportType.includes("LOANS")) {
+      return (
+        <>
+          <TableCell>{item.id}</TableCell>
+          <TableCell>{item.client?.name} ({item.client?.rut})</TableCell>
+          <TableCell>{item.tool?.name}</TableCell>
+          <TableCell>{item.startDate}</TableCell><TableCell>{item.dueDate}</TableCell>
+          <TableCell>{item.status}</TableCell>
+        </>
+      );
+    }
+    if (reportType === "LATE_CLIENTS") {
+      return (
+        <>
+          <TableCell>{item.id}</TableCell><TableCell>{item.rut}</TableCell>
+          <TableCell>{item.name}</TableCell><TableCell>{item.email}</TableCell>
+          <TableCell>{item.status}</TableCell>
+        </>
+      );
+    }
+    return (
+      <>
+        <TableCell sx={{ fontWeight: 'bold' }}>#{index + 1}</TableCell>
+        <TableCell>{item[0]?.name}</TableCell><TableCell>{item[1]}</TableCell>
+      </>
+    );
+  };
+
   const renderTable = () => {
     if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 5 }}><CircularProgress /></Box>;
     if (message && reportData.length === 0) return <Alert severity="warning">{message}</Alert>;
@@ -91,46 +144,13 @@ function ReportViewer() {
         <Table stickyHeader>
           <TableHead>
             <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-              {reportType.includes("LOANS") ? (
-                <>
-                  <TableCell>ID</TableCell><TableCell>Cliente</TableCell><TableCell>Herramienta</TableCell>
-                  <TableCell>Inicio</TableCell><TableCell>Vencimiento</TableCell><TableCell>Estado</TableCell>
-                </>
-              ) : reportType === "LATE_CLIENTS" ? (
-                <>
-                  <TableCell>ID</TableCell><TableCell>RUT</TableCell><TableCell>Nombre</TableCell>
-                  <TableCell>Email</TableCell><TableCell>Estado</TableCell>
-                </>
-              ) : (
-                <>
-                  <TableCell>Ranking</TableCell><TableCell>Herramienta</TableCell><TableCell>Total Préstamos</TableCell>
-                </>
-              )}
+              {renderTableHeader()}
             </TableRow>
           </TableHead>
           <TableBody>
             {reportData.map((item, index) => (
               <TableRow key={item.id || index} hover>
-                {reportType.includes("LOANS") ? (
-                  <>
-                    <TableCell>{item.id}</TableCell>
-                    <TableCell>{item.client?.name} ({item.client?.rut})</TableCell>
-                    <TableCell>{item.tool?.name}</TableCell>
-                    <TableCell>{item.startDate}</TableCell><TableCell>{item.dueDate}</TableCell>
-                    <TableCell>{item.status}</TableCell>
-                  </>
-                ) : reportType === "LATE_CLIENTS" ? (
-                  <>
-                    <TableCell>{item.id}</TableCell><TableCell>{item.rut}</TableCell>
-                    <TableCell>{item.name}</TableCell><TableCell>{item.email}</TableCell>
-                    <TableCell>{item.status}</TableCell>
-                  </>
-                ) : (
-                  <>
-                    <TableCell sx={{ fontWeight: 'bold' }}>#{index + 1}</TableCell>
-                    <TableCell>{item[0]?.name}</TableCell><TableCell>{item[1]}</TableCell>
-                  </>
-                )}
+                {renderTableRow(item, index)}
               </TableRow>
             ))}
           </TableBody>

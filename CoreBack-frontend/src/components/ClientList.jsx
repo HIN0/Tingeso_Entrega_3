@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import PropTypes from 'prop-types'; // IMPORTACIÓN PARA VALIDACIÓN
 import ClientService from "../services/client.service";
 import LoanService from "../services/loan.service";
 import { useKeycloak } from "@react-keycloak/web";
@@ -6,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { 
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, 
   Typography, Button, Chip, Box, IconButton, Tooltip, Collapse, Snackbar, Alert,
-  CircularProgress, Divider, Dialog, DialogTitle, DialogContent, DialogContentText, 
+  CircularProgress, Dialog, DialogTitle, DialogContent, DialogContentText, 
   DialogActions, Zoom, TextField, InputAdornment
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
@@ -18,7 +19,6 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import SearchIcon from '@mui/icons-material/Search';
 
-// Subcomponente de Deudas Modernizado (Heurística #1 y #4)
 function DebtDetails({ clientId, messageSetter }) {
   const [debts, setDebts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -106,9 +106,15 @@ function DebtDetails({ clientId, messageSetter }) {
   );
 }
 
+// CORRECCIÓN SONAR: Validación de Props para el subcomponente
+DebtDetails.propTypes = {
+  clientId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  messageSetter: PropTypes.func.isRequired
+};
+
 function ClientList() {
   const [clients, setClients] = useState([]);
-  const [searchTerm, setSearchTerm] = useState(""); // Estado para el filtro
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [visibleDebtsClientId, setVisibleDebtsClientId] = useState(null);
   const [notificacion, setNotificacion] = useState({ open: false, text: '', severity: 'info' });
@@ -132,7 +138,6 @@ function ClientList() {
 
   useEffect(() => { if (isAdmin || isEmployee) loadClients(); }, [isAdmin, isEmployee]);
 
-  // Lógica de filtrado dinámico (Heurística #7)
   const filteredClients = clients.filter(client => 
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     client.rut.toLowerCase().includes(searchTerm.toLowerCase())
@@ -159,6 +164,13 @@ function ClientList() {
     }
   };
 
+  // CORRECCIÓN SONAR: Aplanamiento de lógica de diálogos
+  const statusDialogText = confirmStatus.status === 'ACTIVE' 
+    ? `¿Está seguro de restringir a ${confirmStatus.name}? No podrá realizar nuevos préstamos hasta ser reactivado.`
+    : `Se verificará si ${confirmStatus.name} posee deudas pendientes antes de reactivarlo. ¿Continuar?`;
+
+  const statusButtonLabel = confirmStatus.status === 'ACTIVE' ? "Confirmar Restricción" : "Confirmar Reactivación";
+
   return (
     <Box sx={{ p: 4 }}>
       <Snackbar open={notificacion.open} autoHideDuration={5000} onClose={() => setNotificacion({ ...notificacion, open: false })} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
@@ -168,16 +180,12 @@ function ClientList() {
       <Dialog open={confirmStatus.open} onClose={() => setConfirmStatus({ ...confirmStatus, open: false })} TransitionComponent={Zoom}>
         <DialogTitle sx={{ fontWeight: 'bold' }}>Cambio de Estado Administrativo</DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            {confirmStatus.status === 'ACTIVE' 
-              ? `¿Está seguro de restringir a ${confirmStatus.name}? No podrá realizar nuevos préstamos hasta ser reactivado.`
-              : `Se verificará si ${confirmStatus.name} posee deudas pendientes antes de reactivarlo. ¿Continuar?`}
-          </DialogContentText>
+          <DialogContentText>{statusDialogText}</DialogContentText>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setConfirmStatus({ ...confirmStatus, open: false })} variant="outlined">Cancelar</Button>
           <Button onClick={handleExecuteStatusUpdate} variant="contained" color={confirmStatus.status === 'ACTIVE' ? "error" : "success"}>
-            {confirmStatus.status === 'ACTIVE' ? "Confirmar Restricción" : "Confirmar Reactivación"}
+            {statusButtonLabel}
           </Button>
         </DialogActions>
       </Dialog>
@@ -186,7 +194,6 @@ function ClientList() {
         <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1a237e' }}>Gestión de Clientes</Typography>
         <Box sx={{ display: 'flex', gap: 2, flexGrow: 1, justifyContent: 'flex-end' }}>
           
-          {/* BUSCADOR DINÁMICO (Heurística #7) */}
           <TextField 
             placeholder="Buscar por nombre o RUT..."
             variant="outlined"
@@ -203,11 +210,11 @@ function ClientList() {
             }}
           />
 
-          {isAdmin || isEmployee ? (
+          {(isAdmin || isEmployee) && (
             <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => navigate("/clients/add")} sx={{ borderRadius: 2, px: 3 }}>
               Registrar Cliente
             </Button>
-          ) : null}
+          )}
         </Box>
       </Box>
 
@@ -238,7 +245,13 @@ function ClientList() {
             ) : (
               filteredClients
                 .slice()
-                .sort((a, b) => a.status === b.status ? a.id - b.id : (a.status === 'ACTIVE' ? -1 : 1))
+                .sort((a, b) => {
+                  // CORRECCIÓN SONAR: Aplanamiento de la lógica de ordenación
+                  if (a.status !== b.status) {
+                    return a.status === 'ACTIVE' ? -1 : 1;
+                  }
+                  return a.id - b.id;
+                })
                 .map(client => (
                   <React.Fragment key={client.id}>
                     <TableRow hover>
@@ -252,7 +265,7 @@ function ClientList() {
                       </TableCell>
                       <TableCell align="center">
                         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                          {isAdmin || isEmployee ? (
+                          {(isAdmin || isEmployee) && (
                             <>
                               <Tooltip title="Editar Perfil"><IconButton color="primary" onClick={() => navigate(`/clients/edit/${client.id}`)} sx={{ bgcolor: '#e3f2fd' }}><EditIcon /></IconButton></Tooltip>
                               <Tooltip title={client.status === 'ACTIVE' ? 'Restringir Cliente' : 'Intentar Reactivación'}>
@@ -265,7 +278,7 @@ function ClientList() {
                                 </IconButton>
                               </Tooltip>
                             </>
-                          ): null }
+                          )}
                           {(isAdmin || isEmployee) && client.status === 'RESTRICTED' && (
                             <Tooltip title={visibleDebtsClientId === client.id ? 'Cerrar Panel de Deudas' : 'Ver Deudas Pendientes'}>
                               <IconButton color="secondary" sx={{ bgcolor: '#f3e5f5' }} onClick={() => setVisibleDebtsClientId(visibleDebtsClientId === client.id ? null : client.id)}>

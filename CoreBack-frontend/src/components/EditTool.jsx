@@ -39,11 +39,21 @@ function EditTool() {
 
   const showMsg = (text, severity = "info") => setNotificacion({ open: true, text, severity });
 
+  // CORRECCIÓN SONAR: Se eliminó el ternario anidado y se usa Number.parseInt
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const isNumeric = name === 'replacementValue';
-    const val = isNumeric ? (value === "" ? "" : parseInt(value) || 0) : value;
-    setTool({ ...tool, [name]: val });
+    let finalValue = value;
+
+    if (name === 'replacementValue') {
+      if (value === "") {
+        finalValue = "";
+      } else {
+        // Uso de Number.parseInt con base 10 explícita
+        finalValue = Number.parseInt(value, 10) || 0;
+      }
+    }
+    
+    setTool({ ...tool, [name]: finalValue });
   };
 
   const handleSubmit = (e) => {
@@ -125,7 +135,6 @@ function EditTool() {
               />
             </Grid>
 
-            {/* Fila para los botones centrados */}
             <Grid item xs={12}>
               <Box sx={{ 
                 mt: 4, 

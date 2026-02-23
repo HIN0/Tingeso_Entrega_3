@@ -3,8 +3,8 @@ import http from "../http-common";
 class KardexService {
   // RF5.2: Consultar historial por herramienta
   getByToolId(toolId) {
-    // Validar que toolId sea un número antes de llamar
-    if (isNaN(parseInt(toolId))) {
+    // CORRECCIÓN SONAR: Uso de Number.isNaN y Number.parseInt con base decimal explícita
+    if (Number.isNaN(Number.parseInt(toolId, 10))) {
         return Promise.reject(new Error("Invalid Tool ID. Please enter a number."));
     }
     return http.get(`/kardex/tool/${toolId}`);

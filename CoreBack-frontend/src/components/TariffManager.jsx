@@ -47,8 +47,8 @@ function TariffManager() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // Permitimos "" para que el usuario pueda borrar y escribir sin que se anteponga el 0
-    const numericValue = value === "" ? "" : parseInt(value, 10);
+    // CORRECCIÓN SONAR: Uso de Number.parseInt con base decimal
+    const numericValue = value === "" ? "" : Number.parseInt(value, 10);
     setTariffs({ ...tariffs, [name]: numericValue });
   };
 
@@ -61,11 +61,13 @@ function TariffManager() {
         showMsg("Tarifas actualizadas correctamente.", "success");
         loadTariffs();
       })
-      .catch((e) => showMsg(`Error al actualizar: ${e.message}`, "error"));
+      .catch((err) => showMsg(`Error al actualizar: ${err.message}`, "error"));
   };
 
-  // Heurística #5: Validación para deshabilitar el botón si hay campos vacíos
-  const isFormInvalid = Object.values(tariffs).some(val => val === "" || val === null || isNaN(val));
+  // CORRECCIÓN SONAR: Lógica de validación robusta y uso de Number.isNaN
+  const isFormInvalid = Object.values(tariffs).some(val => 
+    val === "" || val === null || Number.isNaN(val)
+  );
 
   if (!initialized || loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
 
@@ -99,7 +101,6 @@ function TariffManager() {
                   value={tariffs[field.name]}
                   onChange={handleChange}
                   required
-                  // Heurística #5: Mostrar advertencia si el campo está vacío
                   error={tariffs[field.name] === ""}
                   helperText={tariffs[field.name] === "" ? "Ingrese valor" : ""}
                   sx={{
@@ -119,21 +120,20 @@ function TariffManager() {
             ))}
 
             <Grid item xs={12}>
-              {/* Botones centrados con respecto al contenedor */}
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 3 }}>
                 <Button
                   type="submit"
                   variant="contained"
                   startIcon={<SaveIcon />}
-                  disabled={isFormInvalid} // No permite guardar si falta un valor
+                  disabled={isFormInvalid}
                   sx={{ px: 4 }}
                 >
                   Guardar Configuración
                 </Button>
                 
                 <Button
-                  variant="contained" // Cambiado a contenido para que resalte más el color
-                  color="error" // Color rojo solicitado
+                  variant="contained"
+                  color="error"
                   startIcon={<CancelIcon />}
                   onClick={() => navigate("/")}
                   sx={{ px: 4 }}
