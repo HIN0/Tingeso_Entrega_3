@@ -18,34 +18,51 @@ function AddClient() {
   const [notificacion, setNotificacion] = useState({ open: false, text: '', severity: 'info' });
   const navigate = useNavigate();
 
-  // Expresiones regulares para validación estricta
+  // CORRECCIÓN SONAR: Se eliminó el escape innecesario en el guion del RUT
   const regs = {
-    rut: /^(\d{1,2}(\.?\d{3}){2})\-([\dkK])$/,
+    rut: /^(\d{1,2}(\.?\d{3}){2})-([\dkK])$/, 
     phone: /^9\d{8}$/,
     email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
   };
 
-  // Manejo de cambios en los campos del formulario
   const handleChange = (e) => {
     setClient({ ...client, [e.target.name]: e.target.value });
   };
 
   const showMsg = (text, severity = "info") => setNotificacion({ open: true, text, severity });
 
-  // Lógica de validación por campo
   const validateName = () => client.name.trim().length >= 3;
   const validateRut = () => regs.rut.test(client.rut);
   const validatePhone = () => regs.phone.test(client.phone);
   const validateEmail = () => regs.email.test(client.email);
 
-  // Determinar color de la celda (Heurística #1)
   const getFieldColor = (isValid, value) => {
-    if (!value) return "error"; // Rojo si está vacío
-    return isValid ? "success" : "error"; // Verde si es válido, Rojo si no
+    if (!value) return "error";
+    return isValid ? "success" : "error";
   };
 
-  // Validación general del formulario (Heurística #2)
   const isFormInvalid = !(validateName() && validateRut() && validatePhone() && validateEmail());
+
+  // CORRECCIÓN SONAR: Extracción de ternarios anidados para mejorar legibilidad
+  const getNameHelperText = () => {
+    if (client.name === "") return "Ingrese nombre completo";
+    return validateName() ? "Nombre válido" : "Mínimo 3 caracteres";
+  };
+
+  const getRutHelperText = () => {
+    if (!client.rut) return "Ingrese rut";
+    return validateRut() ? "RUT válido" : "Formato: 12.345.678-9";
+  };
+
+  const getPhoneHelperText = () => {
+    if (!client.phone) return "Ingrese número telefónico";
+    return validatePhone() ? "Teléfono válido" : "Debe empezar con 9 y tener 9 dígitos";
+  };
+
+  const getEmailHelperText = () => {
+    if (!client.email) return "Ingrese correo electrónico";
+    return validateEmail() ? "Email válido" : "Correo inválido";
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -61,7 +78,6 @@ function AddClient() {
       });
   };
 
-  // Estilo para "limpiar" el gris del autocompletado
   const autofillStyles = {
     "& input:-webkit-autofill": {
       WebkitBoxShadow: "0 0 0 1000px white inset",
@@ -86,8 +102,8 @@ function AddClient() {
                 fullWidth label="Nombre Completo" name="name" value={client.name} onChange={handleChange} required
                 color={getFieldColor(validateName(), client.name)}
                 focused={client.name !== ""}
-                error={client.name === ""}
-                helperText={client.name === "" ? "Ingrese nombre completo" : (!validateName() ? "Mínimo 3 caracteres" : "Nombre válido")}
+                error={client.name === "" || (client.name !== "" && !validateName())}
+                helperText={getNameHelperText()}
                 InputProps={{ startAdornment: <InputAdornment position="start"><PersonIcon color={getFieldColor(validateName(), client.name)} /></InputAdornment> }}
                 sx={{...autofillStyles}}
               />
@@ -99,8 +115,8 @@ function AddClient() {
                 fullWidth label="RUT" name="rut" value={client.rut} onChange={handleChange} required
                 color={getFieldColor(validateRut(), client.rut)}
                 focused={client.rut !== ""}
-                error={client.rut === "" && !validateRut()}
-                helperText={!client.rut ? "Ingrese rut" : (!validateRut() ? "Formato: 12.345.678-9" : "RUT válido")}
+                error={(client.rut !== "" && !validateRut()) || client.rut === ""}
+                helperText={getRutHelperText()}
                 placeholder="12.345.678-9"
                 InputProps={{ startAdornment: <InputAdornment position="start"><BadgeIcon color={getFieldColor(validateRut(), client.rut)} /></InputAdornment> }}
                 sx={{...autofillStyles}}
@@ -114,7 +130,7 @@ function AddClient() {
                 color={getFieldColor(validatePhone(), client.phone)}
                 focused={client.phone !== ""}
                 error={client.phone === "" || !validatePhone()}
-                helperText={!client.phone ? "Ingrese número telefónico" : (!validatePhone() ? "Debe empezar con 9 y tener 9 dígitos" : "Teléfono válido")}
+                helperText={getPhoneHelperText()}
                 InputProps={{ startAdornment: <InputAdornment position="start"><PhoneIcon color={getFieldColor(validatePhone(), client.phone)} /></InputAdornment> }}
                 sx={{...autofillStyles}}
               />
@@ -127,13 +143,13 @@ function AddClient() {
                 color={getFieldColor(validateEmail(), client.email)}
                 focused={client.email !== ""}
                 error={client.email === "" || !validateEmail()}
-                helperText={!client.email ? "Ingrese correo electrónico" : (!validateEmail() ? "Correo inválido" : "Email válido")}
+                helperText={getEmailHelperText()}
                 InputProps={{ startAdornment: <InputAdornment position="start"><EmailIcon color={getFieldColor(validateEmail(), client.email)} /></InputAdornment> }}
                 sx={{...autofillStyles}}
               />
             </Grid>
 
-            {/* Botones Centrados */}
+            {/* Botones */}
             <Grid item xs={12}>
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 4 }}>
                 <Button

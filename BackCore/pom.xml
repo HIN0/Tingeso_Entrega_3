@@ -78,6 +78,24 @@
 			<artifactId>h2</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+        <!-- Mockito para pruebas unitarias -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
+            <version>5.2.0</version> <scope>test</scope>
+        </dependency>
+
+        <!-- Byte Buddy para pruebas unitarias -->
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
+            <version>1.15.1</version> </dependency>
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy-agent</artifactId>
+            <version>1.15.1</version>
+        </dependency>
     </dependencies>
 
     <build>

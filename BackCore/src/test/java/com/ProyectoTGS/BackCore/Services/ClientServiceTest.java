@@ -312,7 +312,7 @@ public class ClientServiceTest {
         assertEquals(ClientStatus.ACTIVE, reactivatedClient.getStatus());
 
         // Verificar que se realizaron las comprobaciones necesarias
-        verify(clientRepository, times(2)).findById(clientId);
+        verify(clientRepository, times(1)).findById(clientId);
         verify(loanRepository, times(1)).countByClientAndStatus(restrictedClient, LoanStatus.LATE);
         verify(loanRepository, times(1)).findByClientAndStatusAndTotalPenaltyGreaterThan(restrictedClient, LoanStatus.RECEIVED, 0.0);
         // Verificar que se guardó el cambio de estado

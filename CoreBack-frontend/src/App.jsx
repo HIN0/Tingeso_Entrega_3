@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
 import { useKeycloak } from "@react-keycloak/web";
+import PropTypes from 'prop-types'; // Importación necesaria para validación
 
 // Componentes
 import Header from "./components/Header";
@@ -20,18 +21,22 @@ import KardexViewer from "./components/KardexViewer";
 // Material UI
 import { Container, CssBaseline, Box, Typography, Paper, CircularProgress, Button } from '@mui/material';
 
-// Utilidad de verificación de roles integrada
+// Utilidad de verificación de roles optimizada (Solución SonarQube)
 const hasRequiredRole = (keycloak, roles) => {
   if (!keycloak?.tokenParsed) return false;
+  
   const realmRoles = keycloak.tokenParsed.realm_access?.roles || [];
   const resourceRoles = keycloak.tokenParsed.resource_access?.['toolrent-client']?.roles || [];
-  const allRoles = [...realmRoles, ...resourceRoles].map(r => r.toUpperCase());
   
-  return roles.some(role => allRoles.includes(role.toUpperCase()));
+  // CORRECCIÓN: Usamos Set para una búsqueda de complejidad O(1) en lugar de O(n)
+  const allRoles = new Set([...realmRoles, ...resourceRoles].map(r => r.toUpperCase()));
+  
+  // CORRECCIÓN: Usamos .has() en lugar de .includes()
+  return roles.some(role => allRoles.has(role.toUpperCase()));
 };
 
-// Componente de Ruta Protegida (Heurística #1: Visibilidad del estado)
-function RequireAuth({ children, roles }) {
+// Componente de Ruta Protegida
+function RequireAuth({ children, roles = [] }) { // Default value para roles
   const { keycloak, initialized } = useKeycloak();
 
   if (!initialized) {
@@ -46,8 +51,8 @@ function RequireAuth({ children, roles }) {
   if (!keycloak?.authenticated) {
     return <Navigate to="/" replace />;
   }
-  // Necesario?
-  if (roles && roles.length > 0) {
+
+  if (roles.length > 0) {
     if (!hasRequiredRole(keycloak, roles)) {
       return (
         <Container maxWidth="md" sx={{ mt: 5 }}>
@@ -67,6 +72,12 @@ function RequireAuth({ children, roles }) {
   return children;
 }
 
+// CORRECCIÓN ESLINT: Validación de props para RequireAuth
+RequireAuth.propTypes = {
+  children: PropTypes.node.isRequired,
+  roles: PropTypes.arrayOf(PropTypes.string)
+};
+
 export default function App() {
   return (
     <Router>
@@ -75,15 +86,14 @@ export default function App() {
         display: 'flex', 
         flexDirection: 'column', 
         minHeight: '100vh', 
-        backgroundColor: '#f8f9fa' // Fondo gris muy claro para mejor contraste (Heurística #8)
+        backgroundColor: '#f8f9fa' 
       }}>
         
-        {/* Header único: Elimina la barra blanca antigua al no llamar más a <Menu /> */}
         <Header />
 
         <Container maxWidth="lg" sx={{ mt: 3, mb: 6, flexGrow: 1 }}>
           <Routes>
-            {/* Página de Bienvenida (Heurística #4) */}
+            {/* Página de Bienvenida */}
             <Route path="/" element={
               <Box sx={{ textAlign: 'center', py: 8 }}>
                 <Paper elevation={0} sx={{ p: 5, backgroundColor: 'transparent' }}>
@@ -120,7 +130,7 @@ export default function App() {
             <Route path="/reports" element={<RequireAuth roles={["ADMIN","USER"]}><ReportViewer /></RequireAuth>} />
             <Route path="/kardex" element={<RequireAuth roles={["ADMIN", "USER"]}><KardexViewer /></RequireAuth>} />
 
-            {/* Error 404 (Heurística #9: Ayudar a recuperarse de errores) */}
+            {/* Error 404 */}
             <Route path="*" element={
               <Box sx={{ textAlign: 'center', mt: 10 }}>
                 <Typography variant="h4" gutterBottom>404 - Página no encontrada</Typography>
@@ -130,7 +140,6 @@ export default function App() {
           </Routes>
         </Container>
 
-        {/* Footer simple para consistencia visual (Heurística #4) */}
         <Box component="footer" sx={{ py: 3, textAlign: 'center', backgroundColor: '#fff', borderTop: '1px solid #e0e0e0' }}>
           <Typography variant="body2" color="textSecondary">
             © 2026 Sistema de Gestión de Herramientas - Evaluación 3

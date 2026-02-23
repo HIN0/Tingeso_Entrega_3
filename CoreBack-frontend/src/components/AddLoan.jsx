@@ -35,6 +35,28 @@ function AddLoan() {
 
   const showMsg = (text, severity = "info") => setNotificacion({ open: true, text, severity });
 
+  // CORRECCIÓN SONAR: Uso de Number.parseInt en lugar de parseInt global
+  const clientExists = (id) => !id || clients.some(c => c.id === Number.parseInt(id));
+  const toolExists = (id) => !id || tools.some(t => t.id === Number.parseInt(id));
+
+  // Lógica de ayuda para textos y estados (Evita ternarios anidados en el JSX)
+  const getClientHelperText = () => {
+    if (!clientExists(loan.clientId)) return "Persona no existe en DB";
+    return loan.clientId === "" ? "Ingrese valor" : "Cliente validado";
+  };
+
+  const getToolHelperText = () => {
+    if (!toolExists(loan.toolId)) return "Herramienta no existe en DB";
+    return loan.toolId === "" ? "Ingrese valor" : "Herramienta disponible";
+  };
+
+  const getStatusColor = (exists, value) => {
+    return exists && value !== "" ? "success" : "error";
+  };
+
+  const isFormInvalid = !loan.clientId || !loan.toolId || !loan.startDate || !loan.dueDate || 
+                        !clientExists(loan.clientId) || !toolExists(loan.toolId);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
@@ -49,12 +71,6 @@ function AddLoan() {
       });
   };
 
-  const clientExists = (id) => !id || clients.some(c => c.id === parseInt(id));
-  const toolExists = (id) => !id || tools.some(t => t.id === parseInt(id));
-
-  const isFormInvalid = !loan.clientId || !loan.toolId || !loan.startDate || !loan.dueDate || 
-                        !clientExists(loan.clientId) || !toolExists(loan.toolId);
-
   if (!dataLoaded) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><CircularProgress /></Box>;
 
   return (
@@ -67,7 +83,6 @@ function AddLoan() {
 
       <Paper elevation={3} sx={{ p: 5, borderRadius: 2 }}>
         <Box component="form" onSubmit={handleSubmit} noValidate>
-          {/* Grid con dirección de columna para que sea de arriba hacia abajo */}
           <Grid container direction="column" spacing={4}>
             
             {/* CLIENTE */}
@@ -75,7 +90,7 @@ function AddLoan() {
               <Autocomplete
                 options={clients.filter(c => c.status === 'ACTIVE')}
                 getOptionLabel={(option) => `ID: ${option.id} - ${option.name} (${option.rut})`}
-                onChange={(event, newValue) => setLoan({ ...loan, clientId: newValue ? newValue.id : "" })}
+                onChange={(_event, newValue) => setLoan({ ...loan, clientId: newValue ? newValue.id : "" })}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -83,13 +98,15 @@ function AddLoan() {
                     label="Seleccionar Cliente"
                     required
                     error={!clientExists(loan.clientId) || loan.clientId === ""}
-                    helperText={!clientExists(loan.clientId) ? "Persona no existe en DB" : (loan.clientId === "" ? "Ingrese valor" : "Cliente validado")}
-                    color={clientExists(loan.clientId) && loan.clientId !== "" ? "success" : "error"}
+                    helperText={getClientHelperText()}
+                    color={getStatusColor(clientExists(loan.clientId), loan.clientId)}
                     InputProps={{
                       ...params.InputProps,
                       startAdornment: (
                         <>
-                          <InputAdornment position="start"><PersonIcon color={clientExists(loan.clientId) && loan.clientId !== "" ? "success" : "error"} /></InputAdornment>
+                          <InputAdornment position="start">
+                            <PersonIcon color={getStatusColor(clientExists(loan.clientId), loan.clientId)} />
+                          </InputAdornment>
                           {params.InputProps.startAdornment}
                         </>
                       ),
@@ -104,7 +121,7 @@ function AddLoan() {
               <Autocomplete
                 options={tools.filter(t => t.status === 'AVAILABLE')}
                 getOptionLabel={(option) => `ID: ${option.id} - ${option.name} (${option.category})`}
-                onChange={(event, newValue) => setLoan({ ...loan, toolId: newValue ? newValue.id : "" })}
+                onChange={(_event, newValue) => setLoan({ ...loan, toolId: newValue ? newValue.id : "" })}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -112,13 +129,15 @@ function AddLoan() {
                     label="Seleccionar Herramienta"
                     required
                     error={!toolExists(loan.toolId) || loan.toolId === ""}
-                    helperText={!toolExists(loan.toolId) ? "Herramienta no existe en DB" : (loan.toolId === "" ? "Ingrese valor" : "Herramienta disponible")}
-                    color={toolExists(loan.toolId) && loan.toolId !== "" ? "success" : "error"}
+                    helperText={getToolHelperText()}
+                    color={getStatusColor(toolExists(loan.toolId), loan.toolId)}
                     InputProps={{
                       ...params.InputProps,
                       startAdornment: (
                         <>
-                          <InputAdornment position="start"><ConstructionIcon color={toolExists(loan.toolId) && loan.toolId !== "" ? "success" : "error"} /></InputAdornment>
+                          <InputAdornment position="start">
+                            <ConstructionIcon color={getStatusColor(toolExists(loan.toolId), loan.toolId)} />
+                          </InputAdornment>
                           {params.InputProps.startAdornment}
                         </>
                       ),
