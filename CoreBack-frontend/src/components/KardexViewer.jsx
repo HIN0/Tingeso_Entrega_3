@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import KardexService from "../services/kardex.service";
 import ToolService from "../services/tool.service";
 import { 
@@ -25,7 +25,9 @@ function KardexViewer() {
     setToolsLoading(true);
     ToolService.getAll()
       .then(res => {
-        setTools(res.data);
+        // SOLUCIÓN: Ordenamos la lista de sugerencias por ID antes de guardarla
+        const sortedTools = res.data.sort((a, b) => a.id - b.id);
+        setTools(sortedTools);
         setToolsLoading(false);
       })
       .catch(() => {
@@ -72,7 +74,11 @@ function KardexViewer() {
       .finally(() => setLoading(false));
   };
 
-  // 3. Estética de movimientos (Heurística #1)
+  // 3. ORDENAMIENTO DE LA TABLA DE RESULTADOS (Opcional pero recomendado)
+  const sortedKardex = useMemo(() => {
+    return [...kardexData].sort((a, b) => (a.tool?.id || 0) - (b.tool?.id || 0));
+  }, [kardexData]);
+
   const getMovementChip = (type) => {
     const config = {
       'INCOME':           { color: 'success', label: 'INCOME' },
@@ -81,7 +87,6 @@ function KardexViewer() {
       'REPAIR':           { color: 'warning', label: 'REPAIR' },
       'DECOMMISSION':     { color: 'error',   label: 'DECOMMISSION' },
       'MANUAL_DECREASE':  { color: 'primary', label: 'MANUAL_DECREASE' }
-
     };
     const { color, label } = config[type] || { color: 'default', label: type };
     return <Chip label={label} color={color} size="small" variant="outlined" sx={{ fontWeight: 'bold' }} />;
@@ -100,8 +105,6 @@ function KardexViewer() {
 
       <Paper elevation={3} sx={{ p: 4, mb: 4, borderRadius: 2 }}>
         <Grid container direction="column" spacing={4}>
-          
-          {/* SECCIÓN 1: SELECTORES DE TIPO */}
           <Grid item xs={12}>
             <FormControl component="fieldset">
               <RadioGroup row value={queryType} onChange={(e) => setQueryType(e.target.value)}>
@@ -123,7 +126,7 @@ function KardexViewer() {
                   loading={toolsLoading}
                   getOptionLabel={(option) => `[ID: ${option.id}] - ${option.name}`}
                   onChange={(e, val) => setSelectedTool(val)}
-                  sx={{ width: '100%' }} // Fuerza expansión total
+                  sx={{ width: '100%' }}
                   renderInput={(params) => (
                     <TextField 
                       {...params} 
@@ -147,18 +150,10 @@ function KardexViewer() {
               ) : (
                 <Grid container spacing={3}>
                   <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth label="Fecha Desde" type="date"
-                      value={dateRange.start} onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                      InputLabelProps={{ shrink: true }}
-                    />
+                    <TextField fullWidth label="Fecha Desde" type="date" value={dateRange.start} onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })} InputLabelProps={{ shrink: true }} />
                   </Grid>
                   <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth label="Fecha Hasta" type="date"
-                      value={dateRange.end} onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                      InputLabelProps={{ shrink: true }}
-                    />
+                    <TextField fullWidth label="Fecha Hasta" type="date" value={dateRange.end} onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })} InputLabelProps={{ shrink: true }} />
                   </Grid>
                 </Grid>
               )}
@@ -168,13 +163,7 @@ function KardexViewer() {
           {/* SECCIÓN 3: BOTÓN DE ACCIÓN CENTRADO */}
           <Grid item xs={12}>
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-              <Button
-                variant="contained" 
-                onClick={handleFetchKardex} 
-                disabled={loading}
-                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SearchIcon />}
-                sx={{ px: 10, py: 2, fontWeight: 'bold', minWidth: '300px' }}
-              >
+              <Button variant="contained" onClick={handleFetchKardex} disabled={loading} startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SearchIcon />} sx={{ px: 10, py: 2, fontWeight: 'bold', minWidth: '300px' }}>
                 {loading ? "BUSCANDO..." : "CONSULTAR MOVIMIENTOS"}
               </Button>
             </Box>
@@ -187,7 +176,7 @@ function KardexViewer() {
         <Alert severity={message.severity} sx={{ mb: 3 }} variant="filled">{message.text}</Alert>
       )}
 
-      {kardexData.length > 0 && (
+      {sortedKardex.length > 0 && (
         <TableContainer component={Paper} elevation={3} sx={{ borderRadius: 2 }}>
           <Table stickyHeader>
             <TableHead sx={{ backgroundColor: '#1976d2' }}>
@@ -200,7 +189,7 @@ function KardexViewer() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {kardexData.map((mov) => (
+              {sortedKardex.map((mov) => (
                 <TableRow key={mov.id} hover>
                   <TableCell>{formatDateTime(mov.movementDate)}</TableCell>
                   <TableCell>
