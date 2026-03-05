@@ -4,10 +4,11 @@ import { useKeycloak } from "@react-keycloak/web";
 import { 
   Box, Typography, Button, Paper, Grid, Table, TableBody, TableCell, 
   TableContainer, TableHead, TableRow, TextField, Checkbox, 
-  FormControlLabel, CircularProgress, Alert, Divider
+  FormControlLabel, CircularProgress, Alert, Divider, InputAdornment
 } from '@mui/material';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import TodayIcon from '@mui/icons-material/Today';
+import SearchIcon from '@mui/icons-material/Search'; // Nuevo icono para el filtro
 
 function ReportViewer() {
   const [reportType, setReportType] = useState("LATE_CLIENTS");
@@ -16,15 +17,43 @@ function ReportViewer() {
   const [message, setMessage] = useState(""); 
   const [dateRange, setDateRange] = useState({ from: "", to: "" });
   const [useDateFilter, setUseDateFilter] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(""); // --- NUEVO ESTADO PARA FILTRO ---
 
   const { keycloak } = useKeycloak();
   const isAdminOrUser = keycloak?.authenticated && (keycloak.hasRealmRole("ADMIN") || keycloak.hasRealmRole("USER"));
+
+  // Lógica para filtrar los datos localmente
+  const filteredData = reportData.filter((item) => {
+    const term = searchTerm.toLowerCase();
+    
+    // Si el reporte es de PRÉSTAMOS
+    if (reportType.includes("LOANS")) {
+      return (
+        item.client?.name?.toLowerCase().includes(term) ||
+        item.client?.rut?.toLowerCase().includes(term) ||
+        item.tool?.name?.toLowerCase().includes(term)
+      );
+    }
+    // Si el reporte es de CLIENTES
+    if (reportType === "LATE_CLIENTS") {
+      return (
+        item.name?.toLowerCase().includes(term) ||
+        item.rut?.toLowerCase().includes(term)
+      );
+    }
+    // Si es RANKING
+    if (reportType === "TOP_TOOLS") {
+      return item[0]?.name?.toLowerCase().includes(term);
+    }
+    return true;
+  });
 
   const loadReport = (type, filterDates) => {
     if (!isAdminOrUser) return;
     setLoading(true);
     setReportData([]);
     setMessage("");
+    setSearchTerm(""); // Limpiamos el filtro al cambiar de reporte
 
     const fromDate = filterDates && dateRange.from ? dateRange.from : null;
     const toDate = filterDates && dateRange.to ? dateRange.to : null;
@@ -79,7 +108,6 @@ function ReportViewer() {
     loadReport(type, useDateFilter);
   };
 
-  // CORRECCIÓN SONAR: Renderizado de cabecera aplanado
   const renderTableHeader = () => {
     if (reportType.includes("LOANS")) {
       return (
@@ -104,7 +132,6 @@ function ReportViewer() {
     );
   };
 
-  // CORRECCIÓN SONAR: Renderizado de filas aplanado
   const renderTableRow = (item, index) => {
     if (reportType.includes("LOANS")) {
       return (
@@ -148,7 +175,8 @@ function ReportViewer() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {reportData.map((item, index) => (
+            {/* --- USAMOS filteredData EN LUGAR DE reportData --- */}
+            {filteredData.map((item, index) => (
               <TableRow key={item.id || index} hover>
                 {renderTableRow(item, index)}
               </TableRow>
@@ -167,21 +195,40 @@ function ReportViewer() {
 
       <Paper elevation={3} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
         <Grid container spacing={3} alignItems="center">
-          <Grid item xs={12}>
+          <Grid item xs={12} md={6}>
             <FormControlLabel
               control={<Checkbox checked={useDateFilter} onChange={(e) => setUseDateFilter(e.target.checked)} />}
-              label="Aplicar Filtro de Fecha (Opcional en Préstamos/Clientes, Obligatorio en Ranking)"
+              label="Aplicar Filtro de Fecha"
             />
           </Grid>
           
-          <Grid item xs={12} md={5}>
+          {/* --- CAMPO DE BÚSQUEDA AGREGADO --- */}
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Buscar por nombre, RUT o herramienta..."
+              variant="outlined"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={6}>
             <TextField
               fullWidth label="Desde" type="date" value={dateRange.from}
               onChange={e => setDateRange({ ...dateRange, from: e.target.value })}
               disabled={!useDateFilter} InputLabelProps={{ shrink: true }}
             />
           </Grid>
-          <Grid item xs={12} md={5}>
+          <Grid item xs={12} md={6}>
             <TextField
               fullWidth label="Hasta" type="date" value={dateRange.to}
               onChange={e => setDateRange({ ...dateRange, to: e.target.value })}
